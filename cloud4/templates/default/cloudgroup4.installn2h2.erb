@@ -1,0 +1,606 @@
+#!/bin/bash
+
+#
+# Desc: Script to install MongoDB, ZooKeeper, Hydrogen, Tomcat, MemCached
+#
+# Date: 2013/02/16: Support MongoDB, ZooKeeper, Tomcat, MemCached
+# Date: 2013/02/18: Support Hydrogen
+# Date: 2013/02/26: Support Downloading binaries and shutting down services
+# Date: 2013/03/10: Support Downloading binaries from S3 server.
+#                   Support Using "-reset" to clean the environment.
+# Date: 2013/03/12: Supppot Downloading Objects from S3 by query string
+# Date: 2013/03/13: Support Spin Waiting MongoDB/ZooKeeper initializing. 
+#                   Extract a stand alone function install-jre().
+#                   More reliable to use apt-get to install apps.
+# TODO: 
+#       1) Handle the case that wget failed but the file is partially downloaded.
+#       2) Force install (Disaster recovery)
+#
+
+# Enable Network downloading? [Set to 1 to enable]
+ENABLE_DOWNLOAD=1
+
+# Binaries in 3rd server
+#MONGODB_URL='http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-2.0.8.tgz'
+#ZOOKEEPER_URL='http://labs.mop.com/apache-mirror/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz'
+#HYDROGEN_URL='jenkins-hydrogen-373-848b62dd8e34b0215a0399e065b3d9a690e3c8d6.zip'
+#TOMCAT_URL='http://mirror.bjtu.edu.cn/apache/tomcat/tomcat-6/v6.0.36/bin/apache-tomcat-6.0.36.tar.gz'
+
+# Binaries in S3
+AWS_KEY='AKIAJKLZ7DTVZY4N5FGQ'
+AWS_SECRET='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'
+MONGODB_URL='https://s3.amazonaws.com/S3-Group4-Xiaofeng/binaries/mongodb-linux-x86_64-2.2.3.tgz'
+ZOOKEEPER_URL='https://s3.amazonaws.com/S3-Group4-Xiaofeng/binaries/zookeeper-3.4.5.tar.gz'
+HYDROGEN_URL='https://s3.amazonaws.com/S3-Group4-Xiaofeng/binaries/jenkins-hydrogen-373-848b62dd8e34b0215a0399e065b3d9a690e3c8d6.zip'
+TOMCAT_URL='https://s3.amazonaws.com/S3-Group4-Xiaofeng/binaries/apache-tomcat-6.0.36.tar.gz'
+
+# Binary names in local folder
+MONGODB_BINARY='mongodb-linux-x86_64-2.2.3.tgz'
+ZOOKEEPER_BINARY='zookeeper-3.4.5.tar.gz'
+HYDROGEN_BINARY='jenkins-hydrogen-373-848b62dd8e34b0215a0399e065b3d9a690e3c8d6.zip'  # TBD...
+TOMCAT_BINARY='apache-tomcat-6.0.36.tar.gz'
+
+# Directory to install applications
+APPS_DIR='apps'
+DOWNLOADED_DIR='downloads'
+export MONGODB_INSTALL_DIR=
+export ZOOKEEPER_INSTALL_DIR=
+export HYDROGEN_INSTALL_DIR=
+export TOMCAT_INSTALL_DIR=
+
+# Hydrogen configuation setting: dev/production/staging
+HYDROGEN_CONF='hydrogen-staging.conf'
+
+# Devices
+DEV_NULL='/dev/null'
+DEV_STDOUT='/dev/stdout'
+
+# Device for outputting verbose information
+CONSOLE_OUTPUT=
+
+# Device for outputting logs from services (e.g. Mongodb, ZooKeepter, etc) 
+SERVICE_LOG=
+
+
+function apt-install-till-succeed()
+{
+    bin="$1"
+    software="$2"
+	[ "$software" == "" ] && software="$bin"
+    updateFirst="$3"
+	
+    while [ ! $(which "$bin") ]
+	do
+        echo "Trying to installing $software..." >> "$CONSOLE_OUTPUT"
+        [ ! "$updateFirst"  == "" ] && sudo apt-get update >> "$CONSOLE_OUTPUT"
+        sudo apt-get -y install "$software" >> "$CONSOLE_OUTPUT"
+    done
+
+	bin=
+	software=
+	retires=
+	updateFirst=
+}
+
+function kill-processes()
+{
+    for pid in $1; 
+    do 
+        sudo kill -15 $pid;
+    done;
+}
+
+function cd-user-dir()
+{
+    # change current user directory to install apps
+    cd
+}
+
+function create-apps-dir()
+{
+    [ -d "$APPS_DIR" ] || mkdir -p "$APPS_DIR/tmp"
+}
+
+function create-downloads-dir()
+{
+    [ -d "$DOWNLOADED_DIR" ] || mkdir "$DOWNLOADED_DIR"
+}
+
+function show-usage()
+{
+    echo "install.sh -mo -z -h -t -mm -v -s -dbg"
+    echo "-mo:    select MongoDB"
+    echo "-z:     select ZooKeeper"
+    echo "-h:     select Hydrogen"
+    echo "-t:     select Tomcat"
+    echo "-mm:    select Memcached"
+    echo "-v:     select mode on"
+    echo "-s:     shutdown selected services (otherwise, install services)"
+    echo "-reset: clean downloaded and installed binaries"
+    echo "-dbg: use binaries in local folder (rather than download files from S3)"
+}
+
+
+function install-mongodb()
+{
+    echo "Installing Mongo DB..." >> "$CONSOLE_OUTPUT"
+
+    # Already installed
+    [ -d "$MONGODB_INSTALL_DIR" ] && return 0
+
+    # Download
+    cd "$CUR_DIR"
+    create-downloads-dir
+    cd "$DOWNLOADED_DIR"
+
+    DOWNLOADED_MONGODB=$(basename "$MONGODB_URL")
+    [ -e "$DOWNLOADED_MONGODB" -o ! "$ENABLE_DOWNLOAD" == "1" ] || wget "$MONGODB_URL" -O"$(basename "$MONGODB_URL")"  || echo "Failed to download MongoDB"
+
+    # If we fail todownload binary, we use the binaries we providing
+    if [ -e "$DOWNLOADED_MONGODB" ]; then
+        BINARY_DIR="$CUR_DIR/$DOWNLOADED_DIR"
+        MONGODB_BINARY="$DOWNLOADED_MONGODB"
+        MONGODB_INSTALL_DIR="$USER_DIR/$APPS_DIR/${DOWNLOADED_MONGODB%.*}"
+    else
+        BINARY_DIR="$CUR_DIR"
+        MONGODB_INSTALL_DIR="$USER_DIR/$APPS_DIR/${MONGODB_BINARY%.*}"
+    fi
+
+    # Double check if the bianry exists
+    [ -e "$BINARY_DIR/$MONGODB_BINARY" ] || return 1
+
+    # Extract binaries
+    cd-user-dir
+    create-apps-dir
+    tar -zx -f "$BINARY_DIR/$MONGODB_BINARY" --get -C "$APPS_DIR"
+    cd "$MONGODB_INSTALL_DIR"
+
+    # Config
+    [ -d "./data/db" ] || mkdir -p data/db
+
+    return 0
+}
+
+
+function start-mongodb()
+{
+    echo "Starting Mongo DB..." >> "$CONSOLE_OUTPUT"
+    "$MONGODB_INSTALL_DIR/bin/mongod" --dbpath "$MONGODB_INSTALL_DIR/data/db/" >> "$SERVICE_LOG" &
+    return 0
+}
+
+function shutdown-mongodb()
+{
+    echo "Shutting down MongoDB..." >> "$CONSOLE_OUTPUT"
+    ps aux | grep -v "grep" | grep "mongod" >> "$DEV_NULL" && sudo killall -w "mongod"
+}
+
+function install-jre()
+{
+    apt-install-till-succeed "java" "default-jre" "update"
+}
+
+function install-zookeeper()
+{
+    echo "Installing Zoo Keeper..." >> "$CONSOLE_OUTPUT"
+
+    # Already installed
+    [ -d "$ZOOKEEPER_INSTALL_DIR" ] && return 0
+
+    # Download
+    cd "$CUR_DIR"
+    create-downloads-dir
+    cd "$DOWNLOADED_DIR"
+
+    DOWNLOADED_ZOOKEEPER=$(basename "$ZOOKEEPER_URL")
+    echo $DOWNLOADED_ZOOKEEPER
+    [ -e "$DOWNLOADED_ZOOKEEPER" -o ! "$ENABLE_DOWNLOAD" == "1" ] || wget "$ZOOKEEPER_URL" -O"$(basename "$ZOOKEEPER_URL")" || echo "Failed to download zookeeper"
+
+    # If we fail todownload binary, we use the binaries we providing
+    if [ -e "$DOWNLOADED_ZOOKEEPER" ]; then
+        BINARY_DIR="$CUR_DIR/$DOWNLOADED_DIR"
+        ZOOKEEPER_BINARY="$DOWNLOADED_ZOOKEEPER"
+        ZOOKEEPER_INSTALL_DIR="$USER_DIR/$APPS_DIR/${DOWNLOADED_ZOOKEEPER%.tar.gz}"
+    else
+        BINARY_DIR="$CUR_DIR"
+        ZOOKEEPER_INSTALL_DIR="$USER_DIR/$APPS_DIR/${ZOOKEEPER_BINARY%.tar.gz}"
+    fi
+
+    # Double check if the bianry exists
+    [ -e "$BINARY_DIR/$ZOOKEEPER_BINARY" ] || return 1
+
+    # Extract binaries
+    cd-user-dir
+    create-apps-dir
+    tar -zx -f "$BINARY_DIR/$ZOOKEEPER_BINARY" --get -C "$APPS_DIR"
+    cd "$ZOOKEEPER_INSTALL_DIR"
+
+    # Config: Update server path
+    [ -d "./data" ] || mkdir data
+    ZOOKEEPER_DATA_DIR="$ZOOKEEPER_INSTALL_DIR/data"
+    # To use it in sed, escape '/' to '\/' 
+    ZOOKEEPER_DATA_DIR=${ZOOKEEPER_DATA_DIR//\//\\/}   
+
+    cd conf
+    cat zoo_sample.cfg | sed "s/^dataDir=.*/dataDir=$ZOOKEEPER_DATA_DIR/g" > zoo.cfg
+    cd ..
+
+	install-jre
+	
+    return 0
+}
+
+function start-zookeeper()
+{
+    echo "Starting Zoo Keeper..." >> "$CONSOLE_OUTPUT"
+    "$ZOOKEEPER_INSTALL_DIR/bin/zkServer.sh" start >> "$SERVICE_LOG" &
+    return 0
+}
+
+function shutdown-zookeeper()
+{
+    echo "Shutting down ZooKeeper..." >> "$CONSOLE_OUTPUT"
+    ps aux | grep -v "grep" | grep "zookeeper" >> "$DEV_NULL" && "$ZOOKEEPER_INSTALL_DIR/bin/zkServer.sh" stop
+}
+
+
+function install-hydrogen()
+{
+    echo "Installing Hydrogen..." >> "$CONSOLE_OUTPUT"
+
+    # Already installed
+    [ -d "$HYDROGEN_INSTALL_DIR" ] && return 0
+
+    # Download
+    cd "$CUR_DIR"
+    create-downloads-dir
+    cd "$DOWNLOADED_DIR"
+
+    DOWNLOADED_HYDROGEN=$(basename "$HYDROGEN_URL")
+    if [ ! -e "$DOWNLOADED_HYDROGEN" -a "$ENABLE_DOWNLOAD" == "1" ]; then
+        source "$CUR_DIR/aws_s3_util.sh"
+        wget "$HYDROGEN_URL$(generate_aws_s3_query_string "$AWS_KEY" "$AWS_SECRET" "$HYDROGEN_URL" )" -O"$(basename "$HYDROGEN_URL")" || echo "Failed to download Hydrogen"
+    fi
+
+    # If we fail todownload binary, we use the binaries we providing
+    if [ -e "$DOWNLOADED_HYDROGEN" ]; then
+        BINARY_DIR="$CUR_DIR/$DOWNLOADED_DIR"
+        HYDROGEN_BINARY="$DOWNLOADED_HYDROGEN"
+        HYDROGEN_INSTALL_DIR="$USER_DIR/$APPS_DIR/hydrogen"
+    else
+        BINARY_DIR="$CUR_DIR"
+        HYDROGEN_INSTALL_DIR="$USER_DIR/$APPS_DIR/hydrogen"
+    fi
+
+    # Double check if the bianry exists
+    [ -e "$BINARY_DIR/$HYDROGEN_BINARY" ] || return 1
+
+	# Hydrogen requires JDK
+	install-jre
+	
+    # Extract binaries
+    cd-user-dir
+    create-apps-dir
+    [ -d "$HYDROGEN_INSTALL_DIR" ] || mkdir -p "$HYDROGEN_INSTALL_DIR"
+    apt-install-till-succeed "unzip"
+    unzip -u "$BINARY_DIR/$HYDROGEN_BINARY" -d "$HYDROGEN_INSTALL_DIR" >> "$CONSOLE_OUTPUT"
+    cd "$HYDROGEN_INSTALL_DIR"
+
+    # Generate the Certificate
+    [ -e ".keystore_jetty" ] || sudo keytool -genkey -keystore .keystore_jetty -alias jetty -keyalg RSA -keypass cloudseeds -dname CN=Autodesk<<EOF
+cloudseeds
+cloudseeds
+EOF
+
+    # Config: Update MongoDB and ZooKeeper's server path
+    cd deploy/api
+    cat "$HYDROGEN_CONF" \
+      | sed 's/.*# mongodb replica hosts.*/    nodes = ["localhost:27017"]     # mongodb replica hosts/g' \
+      | sed 's/.*# ZK servers.*/    nodes = ["localhost:2181"]      # ZK servers/g' \
+      > hydrogen.conf
+
+    # Grant runme.sh as executable privillige
+    chmod a+x runme.sh
+    return 0
+}
+
+function wait-for-starting()
+{
+    port="$1"
+	message="$2"
+
+    nc -w 5 -z localhost $port
+	while [ ! $? == 0 ]
+	do 
+	    echo "$message" >> "$CONSOLE_OUTPUT"
+		sleep 3s
+		nc -w 5 -z localhost $port
+	done
+}
+
+function start-hydrogen()
+{
+    wait-for-starting 27017 "Waiting for Mongo DB initializing..."
+    wait-for-starting 2181 "Waiting for ZooKeeper initializing..."
+	
+    "$HYDROGEN_INSTALL_DIR/deploy/api/runme.sh" "hydrogen.conf" 0 0 "$HYDROGEN_INSTALL_DIR/.keystore_jetty" cloudseeds >> "$SERVICE_LOG" &
+    return 0
+}
+
+function shutdown-hydrogen()
+{
+    echo "Shutting down Hydrogen..." >> "$CONSOLE_OUTPUT"
+    HYDROGEN_PIDs=$(ps aux | grep -v "grep" | grep "hydrogen" | awk '{FS=" "} {print $2}')
+    kill-processes "$HYDROGEN_PIDs"
+    
+    sleep 5s
+}
+
+function install-tomcat()
+{
+    echo "Installing Tomcat..." >> "$CONSOLE_OUTPUT"
+
+    # Already installed
+    [ -d "$TOMCAT_INSTALL_DIR" ] && return 0
+
+    # Download
+    cd "$CUR_DIR"
+    create-downloads-dir
+    cd "$DOWNLOADED_DIR"
+
+    DOWNLOADED_TOMCAT=$(basename "$TOMCAT_URL")
+    [ -e "$DOWNLOADED_TOMCAT" -o ! "$ENABLE_DOWNLOAD" == "1" ] || wget "$TOMCAT_URL" -O"$(basename "$TOMCAT_URL")"  || echo "Failed to download Tomcat"
+
+    # If we fail todownload binary, we use the binaries we providing
+    if [ -e "$DOWNLOADED_TOMCAT" ]; then
+        BINARY_DIR="$CUR_DIR/$DOWNLOADED_DIR"
+        TOMCAT_BINARY="$DOWNLOADED_TOMCAT"
+        TOMCAT_INSTALL_DIR="$USER_DIR/$APPS_DIR/${DOWNLOADED_TOMCAT%.tar.gz}"
+    else
+        BINARY_DIR="$CUR_DIR"
+        TOMCAT_INSTALL_DIR="$USER_DIR/$APPS_DIR/${TOMCAT_BINARY%.tar.gz}"
+    fi
+
+    # Double check if the bianry exists
+    [ -e "$BINARY_DIR/$TOMCAT_BINARY" ] || return 1
+
+    # Extract binaries
+    cd-user-dir
+    create-apps-dir
+    tar -zx -f "$BINARY_DIR/$TOMCAT_BINARY" --get -C "$APPS_DIR"
+
+    return 0
+}
+
+function start-tomcat()
+{
+    echo "Starting Tomcat..." >> "$CONSOLE_OUTPUT"
+    "$TOMCAT_INSTALL_DIR/bin/startup.sh" >> "$SERVICE_LOG" &
+    return 0
+}
+
+function shutdown-tomcat()
+{
+    echo "Shutting down Tomcat..." >> "$CONSOLE_OUTPUT"
+    ps aux | grep -v "grep" | grep "tomcat" >> "$DEV_NULL" && "$TOMCAT_INSTALL_DIR/bin/shutdown.sh"
+}
+
+
+function install-memcached()
+{
+    apt-install-till-succeed "memcached"
+    return 0
+}
+
+function start-memcached()
+{
+    echo "Starting MemCached..." >> "$CONSOLE_OUTPUT"
+    sudo memcached -d -m 128 -p 11111 -u root >> "$SERVICE_LOG"
+    return 0
+}
+
+function shutdown-memcached()
+{
+    echo "Shutting down MemCached..." >> "$CONSOLE_OUTPUT"
+    ps aux | grep -v "grep" | grep "memcached" >> "$DEV_NULL" && sudo killall -w "memcached"
+}
+
+function execute-action()
+{
+    action=
+
+    case $1 in
+        "install")
+            action=install
+            ;;
+        "start")
+            action=start
+            ;;
+        "shutdown")
+            action=shutdown
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    [ $SELECT_MONGODB ] && $action'-mongodb';
+    [ $SELECT_ZOOKEEPER ] && $action'-zookeeper';
+    [ $SELECT_HYDROGEN ] && $action'-hydrogen';
+    [ $SELECT_TOMCAT ] && $action'-tomcat';
+    [ $SELECT_MEMCACHED ] && $action'-memcached';
+}
+
+
+
+function init()
+{	
+    USER_DIR=$(echo ~)
+    cd-user-dir
+    create-apps-dir
+    cd "$USER_DIR/$APPS_DIR"
+    [ "$(ls -1 -d */ | grep -i 'mongo')" != "" ] && MONGODB_INSTALL_DIR="$(pwd)/$(ls -1 -d */ | grep -i 'mongo')."
+    [ "$(ls -1 -d */ | grep -i 'zookeeper')" != "" ] && ZOOKEEPER_INSTALL_DIR="$(pwd)/$(ls -1 -d */ | grep -i 'zookeeper')."
+    [ "$(ls -1 -d */ | grep -i 'hydrogen')" != "" ] && HYDROGEN_INSTALL_DIR="$(pwd)/$(ls -1 -d */ | grep -i 'hydrogen')."
+    [ "$(ls -1 -d */ | grep -i 'tomcat')" != "" ] && TOMCAT_INSTALL_DIR="$(pwd)/$(ls -1 -d */ | grep -i 'tomcat')."
+    MEMCACHED_INSTALL_DIR=
+}
+
+
+function install-services()
+{
+    echo "Installing apps..." >> "$CONSOLE_OUTPUT"
+    execute-action "install"
+    echo "Install is done. Waiting 3 seconds to start services..." >> "$CONSOLE_OUTPUT"
+    sleep 3s
+}
+
+function start-services()
+{
+    echo "Starting services..." >> "$CONSOLE_OUTPUT"
+    execute-action "start"
+    echo "All services started." >> "$CONSOLE_OUTPUT"
+}
+
+function shutdown-services()
+{
+    echo "Shutting down services..." >> "$CONSOLE_OUTPUT"
+
+    [ $SELECT_HYDROGEN ] && shutdown-hydrogen
+    [ $SELECT_ZOOKEEPER ] && shutdown-zookeeper
+    [ $SELECT_MONGODB ] && shutdown-mongodb
+    [ $SELECT_TOMCAT ] && shutdown-tomcat
+    [ $SELECT_MEMCACHED ] && shutdown-memcached
+
+    echo "All services exited." >> "$CONSOLE_OUTPUT"
+}
+
+function reset()
+{
+    shutdown-services
+    cd "$CUR_DIR"
+    [ -d "$DOWNLOADED_DIR" ] && sudo rm -fr "$DOWNLOADED_DIR"
+
+    cd-user-dir
+    [ -d "$APPS_DIR" ] && sudo rm -fr "$APPS_DIR"
+
+    echo "Done." >> "$CONSOLE_OUTPUT"
+}
+
+
+function check-prerequisite()
+{
+    echo "Checking prerequisite..." >> "$CONSOLE_OUTPUT"
+
+    # Check the existence of MongoDB
+    [ ! -e "$CUR_DIR/$MONGODB_BINARY" ] && return 1;
+
+    # Check the existence of ZooKeeper
+    [ ! -e "$CUR_DIR/$ZOOKEEPER_BINARY" ] && return 1;
+
+    # Check the existence of Hydrogen
+    [ ! -e "$CUR_DIR/$HYDROGEN_BINARY" ] && return 1;
+
+    # Check the existence of Tomcat
+    [ ! -e "$CUR_DIR/$TOMCAT_BINARY" ] && return 1;
+
+    return 0
+}
+
+
+function load-settings-from-args()
+{
+    # Show Usage?
+    if [ "$1" == "" ] || [ "$1" == '--help' ]; then
+        show-usage;
+        return 1
+    fi
+
+    # Enable Verbose?
+    if [[ "$1" == *'-v'* ]]; then
+        EnableVerbose="true"
+        CONSOLE_OUTPUT="$DEV_STDOUT"
+        SERVICE_LOG="$DEV_STDOUT"
+        echo "Verbose mode is on" >> "$CONSOLE_OUTPUT"
+    else
+        CONSOLE_OUTPUT="$DEV_NULL"
+        SERVICE_LOG="$DEV_NULL"
+        echo "Verbose mode is on" >> "$CONSOLE_OUTPUT"
+    fi
+ 
+    
+    # Debug Mode Enabled?
+    if [[ "$1" == *'-dbg'* ]]; then
+        ENABLE_DOWNLOAD=0
+        echo "Debug: ON" >> "$CONSOLE_OUTPUT"
+    fi
+    
+    # Install MongoDB?
+    if [[ "$1" == *'-mo'* ]]; then
+        SELECT_MONGODB="true"
+        echo "MongoDB: Selected" >> "$CONSOLE_OUTPUT"
+    fi
+
+    # Install ZooKeeper?
+    if [[ "$1" == *'-z'* ]]; then
+        SELECT_ZOOKEEPER="true"
+        echo "ZooKeeper: Selected" >> "$CONSOLE_OUTPUT"
+    fi
+
+    # Install Hydrogen?
+    if [[ "$1" == *'-h'* ]]; then
+        SELECT_HYDROGEN="true"
+        echo "Hydrogen: Selected" >> "$CONSOLE_OUTPUT"
+    fi
+    
+    # Install Tomcat?
+    if [[ "$1" == *'-t'* ]]; then
+        SELECT_TOMCAT="true"
+        echo "Tomcat: Selected" >> "$CONSOLE_OUTPUT"
+    fi
+    
+    # Install MemCached?
+    if [[ "$1" == *'-mm'* ]]; then
+        SELECT_MEMCACHED="true"
+        echo "MemCached: Selected" >> "$CONSOLE_OUTPUT"
+    fi
+
+    # Shutdown the selected services?
+    if [[ "$1" == *"-s"* ]]; then
+        init
+        shutdown-services
+        return 1
+    fi
+    
+    # Reset?
+    if [[ "$1" == *"-reset"* ]]; then
+        init
+        reset
+        return 1
+    fi
+    
+    return 0
+}
+
+
+function main()
+{
+    # all the binaries are stored in current directory
+    CUR_DIR=$(pwd)
+
+    load-settings-from-args "$*" || return 1
+    #check-prerequisite || return 1
+
+    init
+    # install binaries
+    install-services
+
+    # start installed services
+    start-services
+
+    # restore previous directory
+    cd $CUR_DIR
+}
+
+main "$*"
+
