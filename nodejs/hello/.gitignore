@@ -1,0 +1,8 @@
+# ignore the exe file and com file
+*.exe
+*.com
+*~
+
+#ignore the folder
+node_modules/
+abc/
