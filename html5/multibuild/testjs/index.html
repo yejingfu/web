@@ -1,0 +1,18 @@
+<html>
+<head>
+<title> Hello World </title>
+<script type="text/javascript" src="/libs/require.js" defer async="true" data-main="main"></script>
+</head>
+<body>
+  This is test js page
+
+<script type="text/javascript">
+  console.log('in index.html');
+// The following codes do not work because the require.js is loaded asynchronously...
+//  require(['main'], function(main){
+//      main.sayHello();
+//  });
+</script>
+
+</body>
+</html>

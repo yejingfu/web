@@ -1,0 +1,5 @@
+# ignore 3rd party folder
+libs/
+multiapps/node_modules/
+
+.DS_Store
