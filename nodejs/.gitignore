@@ -1,2 +1,6 @@
 #ignore the local nodejs modules
 node_modules/
+
+# sublime project settings
+*.sublime-project
+*.sublime-workspace
