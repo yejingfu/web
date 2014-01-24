@@ -1,0 +1,18 @@
+{%load staticfiles%}
+<link rel="stylesheet" type="text/css" href="{%static 'polls/style.css'%}" />
+
+{%if poll_list%}
+<ul>
+  {%for poll in poll_list%}
+    <li>
+      <!-- absolute URL path
+      <a href="/polls/{{poll.id}}/">{{poll.question}}</a>
+      -->
+      <!-- reference URL path by namespace:name -->
+      <a href="{%url 'polls:detail' poll.id%}">{{poll.question}}</a>
+    </li>
+  {%endfor%}
+</ul>
+{%else%}
+<p>No polls are available</p>
+{%endif%}

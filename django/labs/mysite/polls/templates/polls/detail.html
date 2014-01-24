@@ -1,0 +1,24 @@
+<h1>{{poll.question}}</h1>
+<ul>
+  <!-- Simply list all choice 
+  {%for c in poll.choice_set.all%}
+  <li>{{c.choice_text}}</li>
+  {%endfor%}
+  -->
+
+  <!-- vote the post data will contain the name=value (e.g. choice=2) which is get from the radio input -->
+  <!-- The csrf_token is used for security, it will auto-genarate HTML code like below:
+       <input type='hidden' name='csrfmiddlewaretoken' value='FxGpXNjRZVeuPCeZ8XV9LvPtxsE6j01N' />
+    -->
+  {%if err_msg%}<p>{{err_msg}}</p>{%endif%}
+  <form action="{%url 'polls:vote' poll.id%}" method="post">
+    {%csrf_token%}
+    {%for choice in poll.choice_set.all%}
+    <input type="radio" name="choice" id="choice{{forloop.counter}}" value="{{choice.id}}"/>
+    <label for="choice{{forloop.counter}}">{{choice.choice_text}}</label> <br/>
+    {%endfor%}
+    <input type="submit" value="Vote"/>
+  </form>
+</ul>
+
+<a href="{%url 'polls:results' poll.id%}">view vote result</a>
