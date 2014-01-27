@@ -6,7 +6,8 @@ requirejs.config({
     paths: {
         lib: 'libs',
         jquery: 'libs/jquery-2.0.3',
-        bootstrap: 'libs/bootstrap'
+        bootstrap: 'libs/bootstrap',
+        threejs: 'http://cdn.bootcss.com/three.js/r61/three'
     }
 });
 
