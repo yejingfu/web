@@ -28,8 +28,22 @@ if ('development' == app.get('env')) {
   app.use(express.errorHandler());
 }
 
-app.get('/', routes.index);
-app.get('/users', user.list);
+var ctx = {
+    title: 'Jeff Ye'
+};
+
+var httpHandler = function(handler) {
+    return function(req, res) {
+        handler(req, res, ctx);
+    };
+};
+
+app.get('/', httpHandler(routes.index));
+app.get('/home', httpHandler(routes.home));
+app.get('/tutorials', httpHandler(routes.tutorials));
+app.get('/editor', httpHandler(routes.editor));
+app.get('/community', httpHandler(routes.community));
+app.get('/contacts', httpHandler(routes.contacts));
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log('Express server listening on port ' + app.get('port'));
