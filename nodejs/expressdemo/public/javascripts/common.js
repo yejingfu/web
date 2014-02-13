@@ -31,8 +31,27 @@ View.prototype = {
     }
 };
 
+/**
+@class Configuration
+**/
+var Configuration = function(name) {
+    this.name = name;
+    this.storage = {};
+};
+
+Configuration.prototype = {
+    get: function(key) {
+        return this.storage[key];
+    },
+
+    set: function(key, value) {
+        this.storage[key] = value;
+    }
+};
+
 return {
-    View: View
+    View: View,
+    Configuration: Configuration
 };
 
 });

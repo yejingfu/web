@@ -7,13 +7,15 @@ requirejs.config({
         lib: 'libs',
         jquery: 'libs/jquery-2.0.3',
         bootstrap: 'libs/bootstrap',
-        threejs: 'http://cdn.bootcss.com/three.js/r61/three'
+        //threejs: 'http://cdn.bootcss.com/three.js/r61/three',
+        threejs: 'libs/three',
+        signals: 'libs/signals'
     }
 });
 
-requirejs(['jquery'], function($) {   // the jquery should be firstly loaded because bootstrap requires it.
+requirejs(['jquery', 'threejs'], function($, threejs) {   // the jquery should be firstly loaded because bootstrap requires it.
 
-requirejs(['bootstrap', 'app'], function(bs, application){
+requirejs(['bootstrap', 'app'], function(bs, application) {
     var app = application.createApp({title: 'jeff'});
     app.setActiveView(location.pathname);
     app.run();
