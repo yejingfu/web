@@ -170,7 +170,7 @@ Display the THREE logo on the canvas
 Editor.prototype.showThreeLogo = function() {
     var self = this;
     var loader = new THREE.JSONLoader();
-    loader.load('/meshes/treehouse_logo.js', function(geom) {
+    loader.load('/static/meshes/treehouse_logo.js', function(geom) {
         var material = new THREE.MeshLambertMaterial({color: 0x55B663});
         var mesh = new THREE.Mesh(geom, material);
         self.scene.add(mesh);
