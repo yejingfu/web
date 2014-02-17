@@ -1,3 +1,21 @@
 <% include header.ejs %>
-<div id="divEditor"></div>
+<div id="divEditor"/>
+<div id="toolbar", style="position: absolute;top:120px;background-color:gray", class="btn-group btn-group-vertical">
+<div id="toolbar-primtive" class="btn"><span class="glyphicon glyphicon-heart"></span></div>
+<div id="toolbar-setting" class="btn"><span class="glyphicon glyphicon-wrench"></span></div>
+<div id="toolbar-commandline" class="btn"><span class="glyphicon glyphicon-pencil"></span></div>
+</div>
+<div id="toolbar-primtive-options" style="position:absolute;display:none">
+    <a id="tb-primtive-cube" class="btn"><span class="glyphicon glyphicon-bell"></span></a>
+    <a id="tb-primtive-cylinder" class="btn"><span class="glyphicon glyphicon-plane"></span></a>
+    <a id="tb-primtive-sphere" class="btn"><span class="glyphicon glyphicon-hdd"></span></a>
+</div>
+
+<div id="toolbar-setting-options" style="position:absolute;display:none">
+    <a id="tb-setting-grid" class="btn"><i class="glyphicon glyphicon-th"></i></a>
+    <a id="tb-setting-camera" class="btn"><i class="glyphicon glyphicon-globe"></i></a>
+    <a id="tb-setting-prefs" class="btn"><i class="glyphicon glyphicon-user"></i></a>
+</div>
+
+
 <% include footer.ejs %>

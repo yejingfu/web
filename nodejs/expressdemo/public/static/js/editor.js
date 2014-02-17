@@ -1,5 +1,6 @@
-define(['common', 'threejs', 'signals', 'controls/transformcontrols', 'controls/editorcontrols', 'libs/ui.threewrapper'],
-     function(common, threejs, signals, transformcontrols, editorcontrols, uithree) {
+define(['common', 'threejs', 'signals', 'controls/transformcontrols', 'controls/editorcontrols',
+ 'libs/ui.threewrapper', 'libs/ui', 'libs/stats'],
+     function(common, threejs, signals, transformcontrols, editorcontrols, uithree, ui, stats) {
 
 /**
 The 3D modeling editor.
@@ -17,7 +18,13 @@ var Editor = function(app) {
     this.pointLight = null;
     this.xformControls = null;
 
+    this.geometries = {};  // uuid -- geometry
+    this.materials = {}; // uuid -- material
+
     this.container = null;
+    this.info = null;   // display (objects, faces, vertices) at the right bottom
+    this.stats = null;  // display performance at the left top
+    this.cmdEditor = null;  // commandline editor for command inputing from users
 
     this.config = new common.Configuration('editor');
     this.config.set('camera', {position: [5.0, 2.5, 5.0], target: [0, 0, 0]});
@@ -34,6 +41,8 @@ var Editor = function(app) {
         auxRemoved: new libSig.Signal(),
         windowResized: new libSig.Signal()
     };
+
+    this.logo = null;
 };
 
 Editor.prototype = new common.View();
@@ -47,24 +56,7 @@ Editor.prototype.initialize = function() {
     console.log('Editor.initialize');
     this.initGL($('#divEditor'));
     this.bindEvents();
-};
-
-/**
-Launch the editor.
-@method show
-**/
-Editor.prototype.show = function() {
-    common.View.prototype.show.apply(this, arguments);
-    console.log('Editor.show()');
-
-    var self = this;
-    var animation = function() {
-        requestAnimationFrame(animation);
-        self.invalidate();
-    }
-
-    this.showThreeLogo();
-    animation();
+    this.initToolbar();
 };
 
 /**
@@ -111,6 +103,24 @@ Editor.prototype.initGL = function(container) {
     var grid = new THREE.GridHelper(configGrid.size, configGrid.step);
     self.auxScene.add(grid);
 
+    // info text
+    var info = new UI.Text();
+    info.setPosition('absolute');
+    info.setRight('120px');
+    info.setBottom('60px');
+    info.setColor('#ffffff');
+    info.setFontSize('12px');
+    info.setValue('info:');
+    containerDom.appendChild(info.dom);
+    this.info = info;
+
+    // performance panel
+    var stats = new Stats();
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.top = '60px';
+    containerDom.appendChild(stats.domElement);
+    this.stats = stats;
+
     window.addEventListener('resize', function() {
         self.resizeGL(window.innerWidth - 80, window.innerHeight - 120);
     });
@@ -142,7 +152,105 @@ Editor.prototype.bindEvents = function() {
         console.log('onMouseDown:('+x+', ' + y + ')');
     }
     containerDom.addEventListener('mousedown', onMouseDown, false);
+
+    self.signals.sceneGraphChanged.add(function(){
+        self.render();
+        self.updateInfo();
+    });
 };
+
+Editor.prototype.initToolbar = function() {
+    var self = this;
+    $('#toolbar-primtive').toolbar({
+        content: '#toolbar-primtive-options',
+        position: 'right',
+        hideOnClick: true
+    }).on('toolbarItemClick', function(e, item){
+        switch (item.id) {
+            case 'tb-primtive-cube':
+            console.log('cube');
+            break;
+            case 'tb-primtive-cylinder':
+            console.log('cyliner');
+            break;
+            case 'tb-primtive-sphere':
+            console.log('sphere');
+            break;
+        }
+    });
+
+    $('#toolbar-setting').toolbar({
+        content: '#toolbar-setting-options',
+        position: 'right',
+        hideOnClick: true
+    }).on('toolbarItemClick', function(e, item){
+        switch (item.id) {
+            case 'tb-setting-grid':
+            console.log('grid');
+            break;
+            case 'tb-setting-camera':
+            console.log('camera');
+            break;
+            case 'tb-setting-prefs':
+            console.log('preferences');
+            break;
+        }
+    });
+
+    $('#toolbar-commandline').click(function() {
+        self.showCommandLine();
+    });
+};
+
+Editor.prototype.showCommandLine = function() {
+    debugger;
+    var self = this;
+    if (!this.cmdEditor) {
+        var pos = $('#toolbar').position();
+        var top = pos.top + $('#toolbar').height() + 10;
+        var left = pos.left + 5;
+        var html5 = '<div id=\"id_commandline\" style=\"border:solid 1px;position:absolute;top:'+top+
+            'px;left:'+left+'px;width:500px;height:200px;display:none;background-color:rgba(200, 200, 200, 0.8);padding:0px\">'+
+            '<textarea id=\"id_cmdline_log\" rows=\"10\" cols=\"20\" readonly=\"readonly\" style=\"width:100%;resize:none;margin:0px;background-color:rgba(200, 200, 200, 0.2)\"></textarea>'+
+            '<br>'+
+            '<input id=\"id_comdline_input\" name=\"cmdline_input\" type=\"text\" style=\"width:100%;margin:0px;outline:0;border:none;background-color:rgba(200, 200, 200, 0.4)\">'+
+            '</div>';
+        this.cmdEditor = $(html5);
+        this.container.parent().append(this.cmdEditor);
+        $('#id_comdline_input').keydown(function(e) {
+            if (e.keyCode !== 13) return;
+            self.logToCmdLine($('#id_comdline_input').val());
+            $('#id_comdline_input').val('');
+        });
+    }
+    this.cmdEditor.toggle('slow');
+
+};
+
+Editor.prototype.logToCmdLine = function(msg) {
+    var txt = $('#id_cmdline_log').val();
+    $('#id_cmdline_log').val(txt + msg + '\n');
+};
+
+/**
+Launch the editor.
+@method show
+**/
+Editor.prototype.show = function() {
+    common.View.prototype.show.apply(this, arguments);
+    console.log('Editor.show()');
+
+    var self = this;
+    var animation = function() {
+        requestAnimationFrame(animation);
+        self.invalidate();
+        self.stats.update();
+    }
+
+    this.showThreeLogo();
+    animation();
+};
+
 
 Editor.prototype.invalidate = function() {
     this.render();
@@ -154,12 +262,40 @@ Render the main WebGL rendering area.
 @since 1.0.0
 **/
 Editor.prototype.render = function() {
+    if (this.logo) {
+        this.logo.rotation.x += 0.01;
+    }
+    //this.logo.rotation.y += 0.01;
     this.scene.updateMatrixWorld();
     this.auxScene.updateMatrixWorld();
     this.renderer.clear();
     this.renderer.render(this.auxScene, this.camera);
     this.renderer.render(this.scene, this.camera);
     this.xformControls.update();
+};
+
+Editor.prototype.updateInfo = function() {
+    var numObjs = 0;
+    var numFaces = 0;
+    var numVertices = 0;
+    this.scene.traverse(function(obj) {
+        if (obj instanceof THREE.Mesh) {
+            numObjs ++;
+            var geom = obj.geometry;
+            if (geom instanceof THREE.Geometry) {
+                numVertices += geom.vertices.length;
+                numFaces += geom.faces.length;
+            } else if (geom instanceof THREE.BufferGeometry) {
+                numVertices += geom.attributes.position.array.length / 3;
+                if (geom.attributes.index !== undefined) {
+                    numFaces += geom.attributes.index.array.length / 3;
+                } else {
+                    numFaces += geom.attributes.position.array.length / 9;
+                }
+            }
+        }
+    });
+    this.info.setValue('objects: ' + numObjs + ', faces: ' + numFaces + ', vertices: ' + numVertices);
 };
 
 /**
@@ -169,13 +305,36 @@ Display the THREE logo on the canvas
 **/
 Editor.prototype.showThreeLogo = function() {
     var self = this;
-    var loader = new THREE.JSONLoader();
-    loader.load('/static/meshes/treehouse_logo.js', function(geom) {
-        var material = new THREE.MeshLambertMaterial({color: 0x55B663});
-        var mesh = new THREE.Mesh(geom, material);
-        self.scene.add(mesh);
+    if (!self.logo) {
+        var loader = new THREE.JSONLoader();
+        loader.load('/static/meshes/treehouse_logo.js', function(geom) {
+            var material = new THREE.MeshLambertMaterial({color: 0x55B663});
+            self.logo = new THREE.Mesh(geom, material);
+            //self.scene.add(self.logo);
+            //self.invalidate();
+            self.addObject(self.logo);
+        });
+    } else {
         self.invalidate();
+    }
+};
+
+Editor.prototype.addObject = function(obj) {
+    var self = this;
+    obj.traverse(function(child) {
+        if (child.geometry !== undefined) self.addGeometry(child.geometry);
+        if (child.material !== undefined) self.addMaterial(child.material);
     });
+    self.scene.add(obj);
+    self.signals.sceneGraphChanged.dispatch();
+};
+
+Editor.prototype.addGeometry = function(geom) {
+    this.geometries[geom.uuid] = geom;
+};
+
+Editor.prototype.addMaterial = function(mat) {
+    this.materials[mat.uuid] = mat;
 };
 
 return {
