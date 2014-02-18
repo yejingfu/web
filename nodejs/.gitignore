@@ -1,5 +1,6 @@
 #ignore the local nodejs modules
 node_modules/
+asm/
 
 # sublime project settings
 *.sublime-project

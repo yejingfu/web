@@ -1,0 +1,5 @@
+#/bin/sh
+#LD_LIBRARY_PATH=./asm/bin/linux node app.js
+curDir=`pwd`
+LD_LIBRARY_PATH=${curDir}/asm/bin/linux node app.js
+
