@@ -41,23 +41,41 @@ exports.primitiveById = function(req, res, method) {
     //console.log('query:' + JSON.stringify(req.query));
     //console.log('body:'+JSON.stringify(req.body));
     var id = req.params.id;
+    var xforms =[];
+    xforms.push([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
     switch (method) {
         case 'GET':
-        var handle;
+        var handles = [];
         if (id === 'block') {
-            handle = asmAddon.createBlock(-0.5, 0, -0.5, 0.5, 1, 0.5);
+            handles.push(asmAddon.createBlock(-0.5, 0, -0.5, 0.5, 1, 0.5));
         } else if (id === 'cylinder') {
-            handle = asmAddon.createCylinder(0, 0, 0, 0, 2, 0, 1);
+            handles.push(asmAddon.createCylinder(0, 0, 0, 0, 2, 0, 1));
         } else if (id === 'sphere') {
-            handle = asmAddon.createSphere(0, 0, 0, 2);
+            handles.push(asmAddon.createSphere(0, 0, 0, 2));
         } else if (id === 'torus') {
-            handle = asmAddon.createTorus(0, 0, 0, 2, 1);
+            handles.push(asmAddon.createTorus(0, 0, 0, 2, 1));
+        } else if (id === 'demo1') {
+            handles.push(asmAddon.createBlock(-0.5, 0, -0.5, 0.5, 1, 0.5));
+            handles.push(asmAddon.createCylinder(0, 0, 0, 0, 2, 0, 1));
+            handles.push(asmAddon.createSphere(0, 0, 0, 2));
+            handles.push(asmAddon.createTorus(0, 0, 0, 2, 1));
+
+            xforms.push([1,0,0,0, 0,1,0,0, 0,0,1,0, 2.5,0,0,1]);
+            xforms.push([1,0,0,0, 0,1,0,0, 0,0,1,0, -4.5,0,-2.5,1]);
+            xforms.push([1,0,0,0, 0,1,0,0, 0,0,1,0, 4.5,0,-3.5,1]);
         }
 
-        if (handle !== undefined) {
-            res.write('{"primitive":{"type":"asm","handle":"'+handle+'","data":');
-            res.write(asmAddon.jsonGraphicsFromBody(handle));
-            res.write('}}');
+        if (handles.length > 0) {
+            res.write('{"primitives":[');
+            for (var i = 0, len = handles.length; i < len; i++) {
+                res.write('{"type":"asm","handle":"'+handles[i]+'","xform":['+xforms[i].toString()+'],"data":');
+                res.write(asmAddon.jsonGraphicsFromBody(handles[i]));
+                res.write('}');
+                if (i < handles.length - 1) {
+                    res.write(',');
+                }
+            }
+            res.write(']}');
             res.end();
             return;
         }
@@ -72,4 +90,24 @@ exports.primitiveById = function(req, res, method) {
     res.end('{}');
 };
 
-loadAsmAddon();
+exports.handleById = function(req, res, method) {
+    console.log('handleById[' + req.params.id + ']: ' + method);
+    var id = req.params.id;
+    switch (method) {
+        case 'GET':
+        res.write('{"primitives":[{"type":"asm","handle":"'+id+'","data":');
+        res.write(asmAddon.jsonGraphicsFromBody(id));
+        res.write('}]}');
+        res.end();
+        return;
+        break;
+        case 'POST':
+        break;
+    }
+    res.end();
+};
+
+
+if (process.env.LD_LIBRARY_PATH !== undefined) {
+    loadAsmAddon();
+}

@@ -26,3 +26,7 @@ exports.community = function(req, res, ctx) {
 exports.contacts = function(req, res, ctx) {
     res.render('contacts', ctx);
 };
+
+exports.collaboration = function(req, res, ctx) {
+    res.render('collaboration', ctx);
+};

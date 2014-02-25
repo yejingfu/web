@@ -1,0 +1,28 @@
+<% include header.ejs %>
+<script type="text/javascript" src="/static/js/libs/sharejs/bcsocket.js"></script>
+<script type="text/javascript" src="/static/js/libs/sharejs/share.js"></script>
+<script type="text/javascript" src="/static/js/libs/sharejs/textarea.js"></script>
+<script type="text/javascript" src="/static/js/libs/sharejs/json.js"></script>
+<div>
+    <p>Welcome to collaberation lab, please input in the below area:</p>
+    <!-- div id="code_editor" class="div_editor" style="border: solid 1px; height:400px; width:800px"></div -->
+    <div><a id="btn_text1" href="javascript:;">whiteboard 1(plain text)</a></div>
+    <div id="text_editor1" class="div_editor" style="display:none">
+        <textarea id="text_input1" rows=10 cols=50 class="txt_editor"></textarea>
+    </div>
+    <hr>
+    <div><a id="btn_json2" href="javascript:;">whiteboard 2(json)</a></div>
+    <div id="json_editor2" class="div_editor" style="display:none">
+        <textarea id="json_input2" rows=10 cols=50 class="txt_editor"></textarea>
+        <div>
+            [<a id="json_update" href="javascript:;">update</a>]
+        </div>
+    </div>
+
+    <hr>
+    <div>Log</div>
+    <div class="div_editor" class="div_editor" >
+        <textarea id="log_input" rows=6 cols=50 class="txt_editor"></textarea>
+    </div>
+</div>
+<% include footer.ejs %>

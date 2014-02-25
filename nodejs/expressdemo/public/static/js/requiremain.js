@@ -2,7 +2,7 @@
 // the "baseUrl" attribute will be set this same folder as requiremain.js.
 
 requirejs.config({
-    baseUrl: 'static/js',
+    baseUrl: '/static/js',
     paths: {
         lib: 'libs',
         //jquery: 'libs/jquery-2.0.3',

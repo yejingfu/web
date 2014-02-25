@@ -1,5 +1,5 @@
-define(['home', 'editor', 'community', 'contacts', 'tutorials'],
-    function(home, editor, community, contacts, tutorials) {
+define(['home', 'editor', 'community', 'collaboration', 'contacts', 'tutorials'],
+    function(home, editor, community, collab, contacts, tutorials) {
 
 /**
 The global application.
@@ -33,6 +33,9 @@ Application.prototype = {
         } else if (path.indexOf('/community') === 0) {
             $('#nav_community').attr('class', 'active');
             this.activeView = community.create(this);
+        } else if (path.indexOf('/collaboration') === 0) {
+            $('#nav_collaboration').attr('class', 'active');
+            this.activeView = collab.create(this);
         } else if (path.indexOf('/contacts') === 0) {
             $('#nav_contacts').attr('class', 'active');
             this.activeView = contacts.create(this);

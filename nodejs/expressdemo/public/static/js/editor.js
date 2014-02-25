@@ -29,8 +29,12 @@ var Editor = function(app) {
     this.selected = null; // the selected object.
     this.selectionBox = null;  // the selection helper
 
+    this.collabSate = null;  // The state of collaboration document.
+    this.collabDeltaState = null;
+
     this.config = new common.Configuration('editor');
-    this.config.set('camera', {position: [5.0, 2.5, 5.0], target: [0, 0, 0]});
+    this.config.set('collaboration', {enabled: true});
+    this.config.set('camera', {position: [8.0, 2.5, 8.0], target: [0, 0, 0]});
     this.config.set('grid', {size: 50, step: 2});
     this.config.set('scene', {geomDefColor:0x550055})
 
@@ -64,6 +68,9 @@ Editor.prototype.initialize = function() {
     this.initGL($('#divEditor'));
     this.bindEvents();
     this.initToolbar();
+    if (this.config.get('collaboration').enabled) {
+        this.initCollaboration();
+    }
 };
 
 /**
@@ -95,10 +102,13 @@ Editor.prototype.initGL = function(container) {
     //self.xformControls.setSpace('local');   //?
     self.auxScene.add(self.xformControls);
     self.xformControls.addEventListener('change', function() {
+
         console.log('xformControls changed');
         self.cameraControls.enabled = true;
         if (self.xformControls.axis !== undefined) {
             self.cameraControls.enabled = false;
+        } else {
+            // todo
         }
         if (self.selected !== null) {
             self.signals.objectChanged.dispatch(self.selected);
@@ -208,6 +218,7 @@ Editor.prototype.bindEvents = function() {
         var x = (e.clientX - rect.left) / rect.width;
         var y = (e.clientY - rect.top) / rect.height;
         mouseUpPos.set(x, y);
+
         if (mouseDownPos.distanceTo(mouseUpPos) === 0) {
             var intersects = getIntersects(e, objects);
             if (intersects.length > 0) {
@@ -222,6 +233,9 @@ Editor.prototype.bindEvents = function() {
             }
             self.render();
         }
+        //if (self.selected) {
+            self.saveCollabDeltaState();
+        //}
         document.removeEventListener('mouseup', onMouseUp);
     };
     containerDom.addEventListener('mousedown', onMouseDown, false);
@@ -246,7 +260,6 @@ Editor.prototype.bindEvents = function() {
                 self.selectionBox.visible = true;
             }
             if (obj instanceof THREE.PerspectiveCamera === false) {
-                debugger;
                 self.xformControls.attach(obj);
             }
         }
@@ -269,6 +282,7 @@ Editor.prototype.bindEvents = function() {
             }
             self.updateInfo();
         }
+
         self.render();
     });
 };
@@ -283,15 +297,15 @@ Editor.prototype.initToolbar = function() {
         switch (item.id) {
             case 'tb-primtive-cube':
             console.log('cube');
-            self.exeCommand('get /api/primitives/block');
+            self.exeCommand('get /asmapi/primitives/block');
             break;
             case 'tb-primtive-cylinder':
             console.log('cyliner');
-            self.exeCommand('get /api/primitives/cylinder');
+            self.exeCommand('get /asmapi/primitives/cylinder');
             break;
             case 'tb-primtive-sphere':
             console.log('sphere');
-            self.exeCommand('get /api/primitives/sphere');
+            self.exeCommand('get /asmapi/primitives/sphere');
             break;
         }
     });
@@ -362,52 +376,209 @@ Editor.prototype.showCommandLine = function() {
 };
 
 Editor.prototype.logToCmdLine = function(msg) {
+    console.log(msg);
     if ($('#id_cmdline_log').is(':visible')) {
         var txt = $('#id_cmdline_log').val();
         $('#id_cmdline_log').val(txt + msg + '\n');
     }
 };
 
-Editor.prototype.exeCommand = function(cmdstr) {
+Editor.prototype.exeCommand = function(cmdstr, cb) {
     var self = this;
-    var method;
-    var path;
-    var dataStr = '{}';
-    cmdstr = cmdstr.toLowerCase();
-    if (cmdstr.indexOf('get ') === 0) method = 'GET';
-    else if (cmdstr.indexOf('post ') === 0) method = 'POST';
-    else if (cmdstr.indexOf('put ') === 0) method = 'PUT';
-    else if (cmdstr.indexOf('delete ') === 0) method = 'DELETE';
-    else if (cmdstr.indexOf('head ') === 0) method = 'HEAD';
-    if (method === undefined) {
-        self.logToCmdLine('[invalid]: ' + cmdstr);
-        return;
-    }
-    path = cmdstr.slice(method.length+1);
-    path = trim(path);
-    var dataPos = path.indexOf('.data');
-    if (dataPos > 0) {
-        dataStr = path.slice(dataPos+5);
-        dataStr = trim(dataStr).replace(/\'/g, '\"');
-        path = trim(path.slice(0, dataPos));
-    }
-    (function(method, path, dataStr) {
-        $.ajax({
-            url: path,
-            type: method,
-            async: true,
-            dataType:'json',
-            data: JSON.parse(dataStr),
-            success: function(data, textStatus, jqXHR) {
-                self.logToCmdLine('[success]:' + method + '-' + path);
-                self.logToCmdLine(JSON.stringify(data));
-                self.loadGeometryFromJSON(data);
-            },
-            error: function(req, st, err) {
-                self.logToCmdLine('[failed]:'+method+'-'+path);
+    if (cmdstr.indexOf('.local ') === 0) {
+        // execute local command
+        var cmd = cmdstr.slice(7);
+        cmd = trim(cmd);
+        var cmds = cmd.split(' ');
+        if (cmds.length > 0) {
+            cmd = trim(cmds[0]);
+            var args = [];
+            for (var i = 1, len = cmds.length; i < len; i++) {
+                args.push(trim(cmds[i]));
             }
+            if (this[cmd] !== undefined && typeof this[cmd] === 'function') {
+                this[cmd].apply(this, args);
+            }
+        }
+    } else {
+        // execute remote command
+        var method;
+        var path;
+        var dataStr = '{}';
+        cmdstr = cmdstr.toLowerCase();
+        if (cmdstr.indexOf('get ') === 0) method = 'GET';
+        else if (cmdstr.indexOf('post ') === 0) method = 'POST';
+        else if (cmdstr.indexOf('put ') === 0) method = 'PUT';
+        else if (cmdstr.indexOf('delete ') === 0) method = 'DELETE';
+        else if (cmdstr.indexOf('head ') === 0) method = 'HEAD';
+        if (method === undefined) {
+            self.logToCmdLine('[invalid]: ' + cmdstr);
+            return;
+        }
+        path = cmdstr.slice(method.length+1);
+        path = trim(path);
+        var dataPos = path.indexOf('.data');
+        if (dataPos > 0) {
+            dataStr = path.slice(dataPos+5);
+            dataStr = trim(dataStr).replace(/\'/g, '\"');
+            path = trim(path.slice(0, dataPos));
+        }
+        (function(method, path, dataStr) {
+            $.ajax({
+                url: path,
+                type: method,
+                async: true,
+                dataType:'json',
+                data: JSON.parse(dataStr),
+                success: function(data, textStatus, jqXHR) {
+                    self.logToCmdLine('[success]:' + method + '-' + path);
+                    self.logToCmdLine(JSON.stringify(data));
+                    self.loadGeometryFromJSON(data);
+                    if (typeof cb === 'function') {
+                        cb();
+                    }
+                },
+                error: function(req, st, err) {
+                    self.logToCmdLine('[failed]:'+method+'-'+path);
+                }
+            });
+        }(method, path, dataStr));
+    }
+};
+
+Editor.prototype.initCollaboration = function() {
+    var self = this;
+    sharejs.open('46a910fc-d481-41e1-b06c-26cb9a9e62c4', 'json', function(err, doc) {
+        if (err) console.log('Failed to open share document: ' + err);
+        self.collabSate = doc;
+        doc.on('change', function(op) {
+            console.log('collaboration: on change: ' + JSON.stringify(op));
+            self.loadCollabDeltaState(op);
         });
-    }(method, path, dataStr));
+        if (doc.created) {
+            // The shared document is created at first time on server side.
+            // So here is good place to add initial content into the shared document.
+            self.exeCommand('get /asmapi/primitives/demo1', function() {
+                self.saveCollabInitState();
+            });
+        } else {
+            // The shared document is already created.
+            self.loadCollabState();
+        }
+    });
+
+    self.signals.objectChanged.add(function(selectedObj) {
+        if (selectedObj instanceof THREE.Mesh && selectedObj.asmhandle) {
+            var snapshot = self.collabSate.snapshot;
+            var found;
+            for (var i = 0, len = snapshot.primitives.length; i < len; i++) {
+                if (snapshot.primitives[i].asmhandle.toLowerCase() === selectedObj.asmhandle.toLowerCase()) {
+                    found = i;
+                    break;
+                }
+            }
+            if (found !== undefined) {
+                var xform = selectedObj.matrixWorld;
+                console.log('xform:'+xform.toArray());
+                self.collabDeltaState = {p:['primitives', found, 'xform'], od: null, oi:xform.toArray()};
+            }
+        }
+    });
+
+    self.signals.objectAdded.add(function(obj) {
+        if (obj instanceof THREE.Mesh && obj.asmhandle && self.collabSate.snapshot) {
+            var snapshot = self.collabSate.snapshot;
+            var found;
+            for (var i = 0, len = snapshot.primitives.length; i < len; i++) {
+                if (snapshot.primitives[i].asmhandle.toLowerCase() === obj.asmhandle.toLowerCase()) {
+                    found = i;
+                    break;
+                }
+            }
+            if (found === undefined) {
+                var newPrimitive = {asmhandle:obj.asmhandle, xform:obj.matrix.toArray()};
+                self.collabDeltaState = {p:['primitives', len], li:newPrimitive};
+                self.saveCollabDeltaState();
+            }
+        }
+    });
+};
+
+Editor.prototype.saveCollabInitState = function() {
+    // collect the primitive meta data and save into sharejs server.
+    var self = this;
+    var primitivesState = {primitives:[]};
+    self.scene.traverse(function(obj) {
+        if (obj instanceof THREE.Mesh && obj.asmhandle !== undefined) {
+            primitivesState.primitives.push({asmhandle: obj.asmhandle, xform: obj.matrix.toArray()});
+        }
+    });
+    self.collabSate.submitOp([{p: [], od: null, oi: primitivesState}]);
+};
+
+Editor.prototype.loadCollabState = function() {
+    var self = this;
+    var primitives = self.collabSate.snapshot.primitives;
+    if (primitives) {
+        for (var i = 0, len = primitives.length; i < len; i++) {
+            (function(primitive){
+                self.exeCommand('get /asmapi/handle/'+primitive.asmhandle, function() {
+                    var meshObj = self.getAsmObject(primitive.asmhandle);
+                    if (meshObj && primitive.xform) {
+                        var xform = new THREE.Matrix4().fromArray(primitive.xform);
+                        meshObj.applyMatrix(xform);
+                    }
+                });
+            })(primitives[i]);
+        }
+    } else {
+        console.log('Cannot get primitives state from sharejs');
+    }
+};
+
+Editor.prototype.saveCollabDeltaState = function() {
+    var self = this;
+    if (self.collabSate && self.collabDeltaState) {
+        self.collabSate.submitOp([self.collabDeltaState]);
+        self.collabDeltaState = undefined;
+    }
+};
+
+Editor.prototype.loadCollabDeltaState = function(op) {
+    var self = this;
+    if (op && op.length === 1) {
+        var snapshot = self.collabSate.snapshot;
+        if (op[0].p.length === 2) {
+            // add a new primitive
+            var newPrimitive = op[0].li;
+            if (newPrimitive) {
+                var meshObj = self.getAsmObject(newPrimitive.asmhandle);
+                if (meshObj) {
+                    var xform = new THREE.Matrix4().fromArray(newPrimitive.xform);
+                    meshObj.applyMatrix(xform);
+                } else {
+                    self.exeCommand('get /asmapi/handle/'+newPrimitive.asmhandle, function() {
+                        meshObj = self.getAsmObject(newPrimitive.asmhandle);
+                        if (meshObj) {
+                            var xform = new THREE.Matrix4().fromArray(newPrimitive.xform);
+                            meshObj.applyMatrix(xform);
+                        }
+                    });
+                }
+            }
+        } else if (op[0].p.length === 3) {
+            // modify xform
+            var curObj = snapshot[op[0].p[0]][op[0].p[1]];
+            if (curObj && op[0].p[2] === 'xform') {
+                var curMesh = self.getAsmObject(curObj.asmhandle);
+                if (curMesh && op[0].oi) {
+                    var xform = new THREE.Matrix4().fromArray(op[0].oi);
+                    curMesh.matrix.identity();
+                    curMesh.applyMatrix(xform);
+                }
+            }
+        }
+    }
 };
 
 /**
@@ -425,7 +596,7 @@ Editor.prototype.show = function() {
         self.stats.update();
     }
 
-    this.loadThreeLogo();
+    //this.loadThreeLogo();
     animation();
 };
 
@@ -488,11 +659,12 @@ Editor.prototype.loadGeometryFromJSON = function(data) {
         return i;
     };
 
-    if (data.primitive) {
-        if (data.primitive.type === 'asm') {
-            var asmData = data.primitive.data;
+    for (var primitiveIdx = 0, primitiveLen = (data.primitives ? data.primitives.length : 0); primitiveIdx < primitiveLen; primitiveIdx++) {
+        var primitive = data.primitives[primitiveIdx];
+        if (primitive.type === 'asm') {
+            var asmData = primitive.data;
             geom = new THREE.Geometry();
-            geom.name = data.primitive.handle;
+            geom.name = primitive.handle;
             var faces = asmData.faces.create;
             var face;
             var faceVetexIdx;
@@ -523,9 +695,25 @@ Editor.prototype.loadGeometryFromJSON = function(data) {
             geom.computeBoundingSphere();
             var material = new THREE.MeshLambertMaterial({color:this.config.get('scene').geomDefColor});
             var mesh = new THREE.Mesh(geom, material);
+            mesh.asmhandle = geom.name;
+            if (primitive.xform) {
+                var xform = new THREE.Matrix4().fromArray(primitive.xform);
+                mesh.applyMatrix(xform);
+            }
             this.addObject(mesh);
         }
     }
+};
+
+Editor.prototype.getAsmObject = function(handle) {
+    var self = this;
+    var result;
+    self.scene.traverse(function(obj) {
+        if (result === undefined && obj instanceof THREE.Mesh && obj.asmhandle.toLowerCase() === handle.toLowerCase()) {
+            result = obj;
+        }
+    });
+    return result;
 };
 
 /**
@@ -538,6 +726,9 @@ Editor.prototype.loadThreeLogo = function() {
     if (!self.logo) {
         var loader = new THREE.JSONLoader();
         loader.load('/static/meshes/treehouse_logo.js', function(geom) {
+            for (var i = 0, len = geom.vertices.length; i < len; i++) {
+                geom.vertices[i].y -= 0.88;
+            }
             var material = new THREE.MeshLambertMaterial({color: 0x55B663});
             self.logo = new THREE.Mesh(geom, material);
             self.addObject(self.logo);
@@ -569,6 +760,12 @@ Editor.prototype.addGeometry = function(geom) {
 
 Editor.prototype.addMaterial = function(mat) {
     this.materials[mat.uuid] = mat;
+};
+
+Editor.prototype.setTransformMode = function(mode) {
+    if (mode === 'translate' || mode === 'rotate' || mode === 'scale') {
+        this.xformControls.setMode(mode);
+    }
 };
 
 function trim(str) {
