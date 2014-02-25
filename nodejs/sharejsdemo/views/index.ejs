@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <link rel='stylesheet' href='/css/style.css' />
+    <script src="/js/libs/jquery-2.0.3.js"></script>
+    <script src="/js/main.js"></script>
+    <script type="text/javascript" src="/node_modules/browserchannel/dist/bcsocket-uncompressed.js"></script>
+    <script type="text/javascript" src="http://ajaxorg.github.com/ace/build/src/ace.js"></script>
+    <script type="text/javascript" src="/webclient/share.uncompressed.js"></script>
+    <script type="text/javascript" src="/webclient/textarea.js"></script>
+    <script type="text/javascript" src="/webclient/ace.js"></script>
+  </head>
+  <body>
+    <h1><%= title %></h1>
+    <p>Welcome to collaberation lab, please input in the below area:</p>
+    <div id="text_editor" class="div_editor">
+        <textarea id="txt_editor" rows=20 cols=60 class="txt_editor"></textarea>
+    </div>
+    <br>
+    <div id="code_editor" class="div_editor" style="border: solid 1px; height:400px; width:800px"></div>
+  </body>
+</html>
