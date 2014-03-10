@@ -8,6 +8,7 @@ The tutorials stuffs.
 **/
 var Tutorials = function(app) {
     common.View.call(this, app);
+    this.articleName = undefined;
 };
 
 Tutorials.prototype = new common.View();
@@ -19,6 +20,18 @@ Intialize the tutorial.
 Tutorials.prototype.initialize = function() {
     common.View.prototype.initialize.apply(this, arguments);
     console.log('Tutorials.initialize()');
+    var search = window.location.search;
+    if (search.length > 0 && search[0] === '?') {
+        var queries = search.slice(1).split('&');
+        for (var i = 0, len = queries.length; i < len; i++) {
+            var pair = queries[i].split('=');
+            if (pair.length === 2) {
+                if (pair[0] === 'article') {
+                    this.articleName = pair[1];
+                }
+            }
+        }
+    }
 };
 
 /**
@@ -52,7 +65,9 @@ Tutorials.prototype.show = function() {
 Tutorials.prototype.showContent = function(name) {
     var self = this;
 
-    var htmlContainer = '<div id="div_'+name+'" style="border:solid 1px; margin:8px;padding:5px"></div>';
+    var htmlLink = '<br><div><a id="btn_'+name+'" href="javascript:;" class="navbar-link">'+name+'</a></div>';
+
+    var htmlContainer = '<div id="div_'+name+'" style="display:none; border:solid 1px; margin:8px;padding:5px"></div>';
 
     var htmlPreview = '<div id="div_preview_'+name+'">'+
         '<div style="text-align:right">[<a id="edit_'+name+'" href="javascript:;" class="navbar-link">edit</a>]</div>'+
@@ -122,11 +137,25 @@ Tutorials.prototype.showContent = function(name) {
         hookupActions();
     };
 
+    var toggle = function() {
+        $('#div_'+name).toggle('slow');
+        if ($('#div_'+name).is(':empty')) {
+            self.getContentByName(name, 'html', function(data) {
+                appendToContents(data);
+            });
+        }
+    };
+
+    $('#contents').append($(htmlLink));
     $('#contents').append($(htmlContainer));
 
-    self.getContentByName(name, 'html', function(data) {
-        appendToContents(data);
+    $('#btn_'+name).click(function() {
+        toggle();
     });
+    debugger;
+    if (name === this.articleName) {
+        toggle();
+    }
 };
 
 Tutorials.prototype.getContentByName = function(name, contentType, onSuccess) {

@@ -1,5 +1,5 @@
-requirejs(['libs/ui'], function(ui){
-    requirejs(['libs/ui.three'], function(uithree){
+requirejs(['lib/ui'], function(ui){
+    requirejs(['lib/ui.three'], function(uithree){
 
     });
 });

@@ -1,5 +1,5 @@
 define(['common', 'threejs', 'signals', 'controls/transformcontrols', 'controls/editorcontrols',
- 'libs/ui.threewrapper', 'libs/ui', 'libs/stats'],
+ 'lib/ui.threewrapper', 'lib/ui', 'lib/stats'],
      function(common, threejs, signals, transformcontrols, editorcontrols, uithree, ui, stats) {
 
 /**
@@ -26,7 +26,7 @@ var Editor = function(app) {
     this.info = null;   // display (objects, faces, vertices) at the right bottom
     this.stats = null;  // display performance at the left top
     this.cmdEditor = null;  // commandline editor for command inputing from users
-    this.selected = null; // the selected object.
+    this.selectionset = []; // the selected objects.
     this.selectionBox = null;  // the selection helper
 
     this.collabSate = null;  // The state of collaboration document.
@@ -49,6 +49,7 @@ var Editor = function(app) {
         auxRemoved: new libSig.Signal(),
         windowResized: new libSig.Signal(),
         objectAdded: new libSig.Signal(),
+        objectRemoved: new libSig.Signal(),
         objectSelected: new libSig.Signal(),
         objectChanged: new libSig.Signal()
     };
@@ -102,7 +103,6 @@ Editor.prototype.initGL = function(container) {
     //self.xformControls.setSpace('local');   //?
     self.auxScene.add(self.xformControls);
     self.xformControls.addEventListener('change', function() {
-
         console.log('xformControls changed');
         self.cameraControls.enabled = true;
         if (self.xformControls.axis !== undefined) {
@@ -110,8 +110,8 @@ Editor.prototype.initGL = function(container) {
         } else {
             // todo
         }
-        if (self.selected !== null) {
-            self.signals.objectChanged.dispatch(self.selected);
+        if (self.selectionset.length !== 0) {
+            self.signals.objectChanged.dispatch(self.selectionset[self.selectionset.length - 1]);
         }
     });
 
@@ -223,17 +223,23 @@ Editor.prototype.bindEvents = function() {
             var intersects = getIntersects(e, objects);
             if (intersects.length > 0) {
                 var obj = intersects[0].object;
-                if (obj.userData.object !== undefined) {
-                    self.select(obj.userData.object);
+                obj = obj.userData.object || obj;
+                if (e.shiftKey) {
+                    if (self.findSelection(obj) >= 0) {
+                        self.removeSelection(obj);
+                    } else {
+                        self.addSelection(obj);
+                    }
                 } else {
-                    self.select(obj);
+                    self.clearSelection();
+                    self.addSelection(obj);
                 }
             } else {
-                self.select(null);
+                self.clearSelection();
             }
             self.render();
         }
-        //if (self.selected) {
+        //if (self.selectionset.length !== 0) {
             self.saveCollabDeltaState();
         //}
         document.removeEventListener('mouseup', onMouseUp);
@@ -249,6 +255,21 @@ Editor.prototype.bindEvents = function() {
         obj.traverse(function(child) {
             objects.push(child);
         });
+    });
+
+    self.signals.objectRemoved.add(function(obj) {
+        var removeFromObjects = function(child) {
+            for (var i = 0, len = objects.length; i < len; i++) {
+                if (objects[i] === child) {
+                    objects.splice(i, 1);
+                    break;
+                }
+            }
+        }
+        obj.traverse(function(child) {
+            removeFromObjects(child);
+        })
+        removeFromObjects(obj);
     });
 
     self.signals.objectSelected.add(function(obj) {
@@ -502,6 +523,24 @@ Editor.prototype.initCollaboration = function() {
             }
         }
     });
+
+    self.signals.objectRemoved.add(function(obj) {
+        if (obj instanceof THREE.Mesh && obj.asmhandle && self.collabSate.snapshot) {
+            var snapshot = self.collabSate.snapshot;
+            var found;
+            for (var i = 0, len = snapshot.primitives.length; i < len; i++) {
+                if (snapshot.primitives[i].asmhandle.toLowerCase() === obj.asmhandle.toLowerCase()) {
+                    found = i;
+                    break;
+                }
+            }
+            if (found !== undefined) {
+                var primitiveToRemove = {asmhandle:obj.asmhandle, xform:obj.matrix.toArray()};
+                self.collabDeltaState = {p:['primitives', found], ld:primitiveToRemove};
+                self.saveCollabDeltaState();
+            }
+        }
+    });
 };
 
 Editor.prototype.saveCollabInitState = function() {
@@ -522,7 +561,7 @@ Editor.prototype.loadCollabState = function() {
     if (primitives) {
         for (var i = 0, len = primitives.length; i < len; i++) {
             (function(primitive){
-                self.exeCommand('get /asmapi/handle/'+primitive.asmhandle, function() {
+                self.exeCommand('get /asmapi/graphics/handle/'+primitive.asmhandle, function() {
                     var meshObj = self.getAsmObject(primitive.asmhandle);
                     if (meshObj && primitive.xform) {
                         var xform = new THREE.Matrix4().fromArray(primitive.xform);
@@ -546,18 +585,22 @@ Editor.prototype.saveCollabDeltaState = function() {
 
 Editor.prototype.loadCollabDeltaState = function(op) {
     var self = this;
-    if (op && op.length === 1) {
-        var snapshot = self.collabSate.snapshot;
-        if (op[0].p.length === 2) {
+    if (op === undefined || op.length === 0) {
+        return;
+    }
+    var snapshot = self.collabSate.snapshot;
+    for ( var i = 0, len = op.length; i < len; i++) {
+        if (op[i].p.length === 2) {
             // add a new primitive
-            var newPrimitive = op[0].li;
+            var newPrimitive = op[i].li;
+            var delPrimitive = op[i].ld;
             if (newPrimitive) {
                 var meshObj = self.getAsmObject(newPrimitive.asmhandle);
                 if (meshObj) {
                     var xform = new THREE.Matrix4().fromArray(newPrimitive.xform);
                     meshObj.applyMatrix(xform);
                 } else {
-                    self.exeCommand('get /asmapi/handle/'+newPrimitive.asmhandle, function() {
+                    self.exeCommand('get /asmapi/graphics/handle/'+newPrimitive.asmhandle, function() {
                         meshObj = self.getAsmObject(newPrimitive.asmhandle);
                         if (meshObj) {
                             var xform = new THREE.Matrix4().fromArray(newPrimitive.xform);
@@ -565,14 +608,20 @@ Editor.prototype.loadCollabDeltaState = function(op) {
                         }
                     });
                 }
+            } else if (delPrimitive) {
+                var meshObj = self.getAsmObject(delPrimitive.asmhandle);
+                if (meshObj) {
+                    // remove this object from scene
+                    self.removeObject(meshObj);
+                }
             }
-        } else if (op[0].p.length === 3) {
+        } else if (op[i].p.length === 3) {
             // modify xform
-            var curObj = snapshot[op[0].p[0]][op[0].p[1]];
-            if (curObj && op[0].p[2] === 'xform') {
+            var curObj = snapshot[op[i].p[0]][op[i].p[1]];
+            if (curObj && op[i].p[2] === 'xform') {
                 var curMesh = self.getAsmObject(curObj.asmhandle);
-                if (curMesh && op[0].oi) {
-                    var xform = new THREE.Matrix4().fromArray(op[0].oi);
+                if (curMesh && op[i].oi) {
+                    var xform = new THREE.Matrix4().fromArray(op[i].oi);
                     curMesh.matrix.identity();
                     curMesh.applyMatrix(xform);
                 }
@@ -749,9 +798,121 @@ Editor.prototype.addObject = function(obj) {
     self.signals.sceneGraphChanged.dispatch();
 };
 
-Editor.prototype.select = function(obj) {
-    this.selected = obj;
+Editor.prototype.removeObject = function(obj) {
+    var self = this;
+    if (obj !== undefined) {
+        obj.parent.remove(obj);
+        self.signals.objectRemoved.dispatch(obj);
+    }
+};
+
+Editor.prototype.addSelection = function(obj) {
+    this.selectionset.push(obj);
     this.signals.objectSelected.dispatch(obj);
+};
+
+Editor.prototype.removeSelection = function(obj) {
+    for (var i = 0, len = this.selectionset.length; i < len; i++) {
+        if (this.selectionset[i] === obj) {
+            this.selectionset.splice(i, 1);
+            break;
+        }
+    }
+    var last = this.selectionset.length > 0 ? this.selectionset[this.selectionset.length - 1] : null;
+    this.signals.objectSelected.dispatch(last);
+};
+
+Editor.prototype.clearSelection = function() {
+    this.selectionset = [];
+    this.signals.objectSelected.dispatch(null);
+};
+
+Editor.prototype.findSelection = function(obj) {
+    var idx = -1;
+    for (var i = 0, len = this.selectionset.length; i < len; i++) {
+        if (this.selectionset[i] === obj) {
+            idx = i;
+            break;
+        }
+    }
+    return idx;
+};
+
+Editor.prototype.deleteSelection = function() {
+    var asmObjHandles = [];
+    for (var i = 0, len = this.selectionset.length; i < len; i ++) {
+        if (this.selectionset[i].asmhandle !== undefined) {
+            asmObjHandles.push(this.selectionset[i].asmhandle);
+        }
+    }
+    var self = this;
+    if (asmObjHandles.length === 0) return;
+    $.ajax({
+        url: '/asmapi/graphics/handle/' + asmObjHandles.join(','),
+        type: 'DELETE',
+        async: true,
+        success: function(data, textStatus, jqXHR) {
+            self.logToCmdLine('[success]: deleteSelection: ' + asmObjHandles);
+            self.removeSelectionFromScene();
+        },
+        error: function(req, st, err) {
+            self.logToCmdLine('[failed]: deleteSelection: '+ asmObjHandles);
+        }
+    });
+};
+
+Editor.prototype.doBoolean = function(btype) {
+    if (btype !== 'union' && btype !== 'subtract' && btype !== 'intersect') {
+        console.error('The boolean type is not correct');
+        return;
+    }
+    if (this.selectionset.length < 2) {
+        console.error('More than one objects should be selected for boolean');
+        return;
+    }
+    var blank = {
+        handle: this.selectionset[0].asmhandle,
+        xform: this.selectionset[0].matrix.toArray()
+    };
+    var tools = [];
+    for (var i = 1, len = this.selectionset.length; i < len; i++) {
+        if (this.selectionset[i].asmhandle !== undefined) {
+            tools.push({
+                handle: this.selectionset[i].asmhandle,
+                xform: this.selectionset[i].matrix.toArray()
+            });
+        }
+    }
+    if (blank.handle === undefined || tools.length === 0) {
+        console.error('The objects for boolean is not right');
+        return;
+    }
+    var self = this;
+    $.ajax({
+        url: '/asmapi/graphics/boolean',
+        type: 'PUT',
+        async: true,
+        dataType: 'json',
+        data: {
+            type: btype,
+            tools: tools,
+            blank: blank
+        },
+        success: function(data, st, jqXHR) {
+            self.removeSelectionFromScene();
+            self.loadGeometryFromJSON(data);
+        },
+        error: function(req, st, err) {
+            self.logToCmdLine('[failed]: doBoolean: '+ err);
+        }
+    });
+};
+
+Editor.prototype.removeSelectionFromScene = function() {
+    for (var i = 0, len = this.selectionset.length; i < len; i ++) {
+        this.removeObject(this.selectionset[i]);
+    }
+    this.clearSelection();
 };
 
 Editor.prototype.addGeometry = function(geom) {

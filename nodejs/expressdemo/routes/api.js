@@ -24,6 +24,16 @@ var unloadAsmAddon = function() {
     }
 };
 
+var identifyMatStr = '[1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]';
+
+var graphicsFromHandleId = function(handleId, xformStr) {
+    xformStr = xformStr || identifyMatStr;
+    var result = '{"primitives":[{"type":"asm","handle":"'+handleId+'","xform":'+xformStr+',"data":';
+    result += asmAddon.jsonGraphicsFromBody(handleId);
+    result += '}]}';
+    return result;
+};
+
 exports.test = function() {
     loadAsmAddon();
     //var blockHandle = asmAddon.createBlock(0, 0, 0, 1, 1, 1);
@@ -90,19 +100,74 @@ exports.primitiveById = function(req, res, method) {
     res.end('{}');
 };
 
-exports.handleById = function(req, res, method) {
-    console.log('handleById[' + req.params.id + ']: ' + method);
+exports.graphicsFromHandleId = function(req, res, method) {
+    console.log('graphicsFromHandleId[' + req.params.id + ']: ' + method);
     var id = req.params.id;
     switch (method) {
         case 'GET':
-        res.write('{"primitives":[{"type":"asm","handle":"'+id+'","data":');
-        res.write(asmAddon.jsonGraphicsFromBody(id));
-        res.write('}]}');
-        res.end();
+        res.end(graphicsFromHandleId(id));
         return;
         break;
         case 'POST':
         break;
+        case 'DELETE':
+        var bodies = '["'+id+'"]';
+        var ret = asmAddon.deleteBodies(bodies);
+        console.log('deleteBodies:'+ret);
+        res.end();
+        return;
+    }
+    res.end();
+};
+
+exports.graphicsFromBoolean = function(req, res, method) {
+    console.log('graphicsFromBoolean');
+    /**
+    params: {
+        type: 'union|subtract|intersect',
+        tools: [
+            {handle: 'handle1', xform: 'matrix4'},
+            {handle: 'handle2', xform: 'matrix4'}
+        ],
+        blank: {handle: 'resultHandle', xform: 'matrix4'}
+    }
+     The tool handles would be applied into the blank handle.
+     And the blank is returned.
+    */
+    var params = req.body;
+    if (method === 'PUT') {
+        console.log('boolean:'+ JSON.stringify(req.body));
+        var type = params.type;
+        var tools = params.tools;
+        var blank = params.blank;
+        var result;
+        var func;
+        var bodiesToRemove = [];
+        if (type === 'union') func = asmAddon.bodyUnion;
+        else if (type === 'subtract') func = asmAddon.bodySubtract;
+        else if (type === 'intersect') func = asmAddon.bodyIntersect;
+        if (tools.length > 0 && blank !== undefined && func) {
+            result = {};
+            result.handle = asmAddon.copyEntity(blank.handle);
+            bodiesToRemove.push(blank.handle);
+            console.assert(result.handle !== undefined && result.handle !== '');
+            asmAddon.transformBody(result.handle, '['+blank.xform.join(',')+']');
+            for (var i = 0, len = tools.length; i < len; i++) {
+                var tmpHanle = tools[i].handle;
+                bodiesToRemove.push(tmpHanle);
+                asmAddon.transformBody(tmpHanle, '[' + tools[i].xform.join(',')+']');
+                func(tmpHanle, result.handle);
+            }
+        }
+        if (bodiesToRemove.length > 0) {
+            asmAddon.deleteBodies('[' + bodiesToRemove.join(',') + ']'); //(JSON.stringify(bodiesToRemove));
+        }
+        if (result !== undefined) {
+            res.end(graphicsFromHandleId(result.handle));
+            return;
+        } else {
+            console.error('Failed on boolean operation.');
+        }
     }
     res.end();
 };

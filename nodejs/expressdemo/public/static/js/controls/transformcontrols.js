@@ -102,7 +102,7 @@ THREE.TransformGizmo = function () {
 			handle.name = i;
 			if ( this.handleGizmos[i][1] ) handle.position.set( this.handleGizmos[i][1].x, this.handleGizmos[i][1].y, this.handleGizmos[i][1].z );
 			if ( this.handleGizmos[i][2] ) handle.rotation.set( this.handleGizmos[i][2].x, this.handleGizmos[i][2].y, this.handleGizmos[i][2].z );
-			
+
 			this.handles.add( handle );
 
 			if ( this.pickerGizmos && this.pickerGizmos[i] ) {
@@ -110,7 +110,7 @@ THREE.TransformGizmo = function () {
 				var picker = this.pickerGizmos[i][0];
 				if ( this.pickerGizmos[i][1] ) picker.position.set( this.pickerGizmos[i][1].x, this.pickerGizmos[i][1].y, this.pickerGizmos[i][1].z );
 				if ( this.pickerGizmos[i][2] ) picker.rotation.set( this.pickerGizmos[i][2].x, this.pickerGizmos[i][2].y, this.pickerGizmos[i][2].z );
-			
+
 			} else {
 
 				var picker = handle.clone();
@@ -137,7 +137,7 @@ THREE.TransformGizmo = function () {
 		// reset Transformations
 
 		this.traverse(function (child) {
-			if (child instanceof THREE.Mesh) {			
+			if (child instanceof THREE.Mesh) {
 				var tempGeometry = new THREE.Geometry();
 				THREE.GeometryUtils.merge( tempGeometry, child );
 				child.geometry = tempGeometry;
@@ -193,12 +193,12 @@ THREE.TransformGizmo = function () {
 		}
 
 		if ( this.handleGizmos[ axis ] !== undefined ) {
-		
+
 			handle = this.handleGizmos[ axis ][0];
 
 			handle.material.oldColor = handle.material.color.clone();
 			handle.material.oldOpacity = handle.material.opacity;
-	 
+
 			handle.material.color.setRGB( 1, 1, 0 );
 			handle.material.opacity = 1;
 
@@ -218,12 +218,12 @@ THREE.TransformGizmo = function () {
 		}
 
 		if ( this.lineGizmos[ axis ] !== undefined ) {
-		
+
 			line = this.lineGizmos[ axis ][0];
 
 			line.material.oldColor = line.material.color.clone();
 			line.material.oldOpacity = line.material.opacity;
-	 
+
 			line.material.color.setRGB( 1, 1, 0 );
 			line.material.opacity = 1;
 
@@ -273,7 +273,7 @@ THREE.TransformGizmoTranslate = function () {
 	var mesh = new THREE.Mesh( new THREE.CylinderGeometry( 0, 0.05, 0.2, 12, 1, false ) );
 	mesh.position.y = 0.5;
 	THREE.GeometryUtils.merge( arrowGeometry, mesh );
-	
+
 	var lineXGeometry = new THREE.Geometry();
 	lineXGeometry.vertices.push( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 1, 0, 0 ) );
 
@@ -690,7 +690,7 @@ THREE.TransformControls = function ( camera, domElement ) {
 	this.axis = undefined;
 
 	var scope = this;
-	
+
 	var _dragging = false;
 	var _mode = "translate";
 	var _plane = "XY";
@@ -784,7 +784,7 @@ THREE.TransformControls = function ( camera, domElement ) {
 
 	 	this.gizmo["translate"].hide();
 	 	this.gizmo["rotate"].hide();
-	 	this.gizmo["scale"].hide();	
+	 	this.gizmo["scale"].hide();
 	 	this.gizmo[_mode].show();
 
 		this.update();
@@ -803,7 +803,7 @@ THREE.TransformControls = function ( camera, domElement ) {
 		scope.size = size;
 		this.update();
 		scope.dispatchEvent( changeEvent );
-	 	
+
 	}
 
 	this.setSpace = function ( space ) {
@@ -819,7 +819,23 @@ THREE.TransformControls = function ( camera, domElement ) {
 		if ( scope.object === undefined ) return;
 
 		scope.object.updateMatrixWorld();
-		worldPosition.setFromMatrixPosition( scope.object.matrixWorld );
+		/** begin-- Modified by Jeff Ye**/
+		var worldMat = scope.object.matrixWorld;
+		if (scope.object.geometry.boundingBox === null) {
+			scope.object.geometry.computeBoudingBox();
+		}
+		var min = new THREE.Vector3();
+		min.copy(scope.object.geometry.boundingBox.min).applyMatrix4(worldMat);
+		var max = new THREE.Vector3();
+		max.copy(scope.object.geometry.boundingBox.max).applyMatrix4(worldMat);
+		var bottomCenter = new THREE.Vector3();
+		bottomCenter.x = (min.x + max.x) / 2;
+		bottomCenter.y = min.y;
+		bottomCenter.z = (min.z + max.z) / 2;
+		worldPosition.copy(bottomCenter);
+		/** end-- Modified by Jeff Ye**/
+
+		//worldPosition.setFromMatrixPosition( scope.object.matrixWorld );
 		worldRotation.setFromRotationMatrix( tempMatrix.extractRotation( scope.object.matrixWorld ) );
 
 		camera.updateMatrixWorld();
@@ -943,7 +959,7 @@ THREE.TransformControls = function ( camera, domElement ) {
 				scope.object.position.copy( oldPosition );
 				scope.object.position.add( point );
 
-			} 
+			}
 
 			if ( scope.space == "world" || scope.axis.search("XYZ") != -1 ) {
 
@@ -961,7 +977,7 @@ THREE.TransformControls = function ( camera, domElement ) {
 					if ( scope.axis.search("X") != -1 ) scope.object.position.x = Math.round( scope.object.position.x / scope.snap ) * scope.snap;
 					if ( scope.axis.search("Y") != -1 ) scope.object.position.y = Math.round( scope.object.position.y / scope.snap ) * scope.snap;
 					if ( scope.axis.search("Z") != -1 ) scope.object.position.z = Math.round( scope.object.position.z / scope.snap ) * scope.snap;
-				
+
 				}
 
 			}

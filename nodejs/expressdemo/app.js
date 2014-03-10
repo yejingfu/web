@@ -81,7 +81,9 @@ app.head('/asmapi/primitives', apiHandler('HEAD', api.primitives));
 app.get('/asmapi/primitives/:id', apiHandler('GET', api.primitiveById));
 app.post('/asmapi/primitives/:id', apiHandler('POST', api.primitiveById));
 
-app.get('/asmapi/handle/:id', apiHandler('GET', api.handleById));
+app.get('/asmapi/graphics/handle/:id', apiHandler('GET', api.graphicsFromHandleId));
+app.delete('/asmapi/graphics/handle/:id', apiHandler('DELETE', api.graphicsFromHandleId));
+app.put('/asmapi/graphics/boolean', apiHandler('PUT', api.graphicsFromBoolean));
 
 //api.test();
 
