@@ -97,6 +97,7 @@ Editor.prototype.initGL = function(container) {
     // camera
     var configCamera = self.config.get('camera');
     self.camera = new THREE.PerspectiveCamera(50, containerDom.offsetWidth/containerDom.offsetHeight, 1, 5000);
+    debugger;
     self.camera.position.fromArray(configCamera.position);
     self.camera.lookAt(new THREE.Vector3().fromArray(configCamera.target));
     self.xformControls = new THREE.TransformControls(self.camera, containerDom);
@@ -188,6 +189,7 @@ Editor.prototype.bindEvents = function() {
     var ray = new THREE.Raycaster();
     var projector = new THREE.Projector();
     var getIntersects = function(e, obj) {
+        debugger;
         var rc = containerDom.getBoundingClientRect();
         var x = (e.clientX - rc.left) / rc.width;
         var y = (e.clientY - rc.top) / rc.height;
