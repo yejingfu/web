@@ -8,13 +8,32 @@ requirejs.config({
     }
 });
 
-requirejs(['ball'], function(ballLib) {
+requirejs(['ball', 'dragon', 'lib/signals'], function(ballLib, dragonLib, sigLib) {
+
+  var SceneEnum = {
+    ball: 'ball',
+    dragon: 'dragon'
+  };
+
+  var currentScene = SceneEnum.dragon;
+
+  var context = {};
+
+  context.notifications = {
+    mouseDown: new sigLib.Signal(),
+    mouseUp: new sigLib.Signal(),
+    mouseMove: new sigLib.Signal(),
+    touchStart: new sigLib.Signal(),
+    touchEnd: new sigLib.Signal(),
+    resize: new sigLib.Signal(),
+    update: new sigLib.Signal()
+  };
   
-  var canWidth = 800;
-  var canHeight = 600;
+  //var canWidth = 800;
+  //var canHeight = 600;
   //  var renderer = new PIXI.CanvasRenderer(canWidth, canHeight);
   //var renderer = new PIXI.WebGLRenderer(canWidth, canHeight);
-  var renderer = new PIXI.autoDetectRenderer(canWidth, canHeight);
+  var renderer = new PIXI.autoDetectRenderer(800, 600);
   if (renderer instanceof PIXI.WebGLRenderer) {
     console.log('PIXI is using WebGL as renderer engine');
   } else {
@@ -23,8 +42,10 @@ requirejs(['ball'], function(ballLib) {
     renderer.context.webkitImageSmoothingEnabled = false;
   }
   renderer.view.className = 'rendererView';
+  context.renderer = renderer;
 
   var stage = new PIXI.Stage(0xFFFFFF);
+  context.stage = stage;
   
   document.body.appendChild(renderer.view);
   //$('body').append(renderer.view);
@@ -36,36 +57,34 @@ requirejs(['ball'], function(ballLib) {
   stats.domElement.style.top = '0px';
 
   var ballMgr = ballLib.createMgr();
-  ballMgr.init(renderer, stage);
+  ballMgr.init(context);
+  var dragonInst = dragonLib.createInstance();
+  dragonInst.init(context);
 
   $(renderer.view).mousedown(function(e) {
-    ballMgr.onMouseDown(e);
+    context.notifications.mouseDown.dispatch(e);
   });
   $(renderer.view).mouseup(function(e) {
-    ballMgr.onMouseUp(e);
+    context.notifications.mouseUp.dispatch(e);
   });
   document.addEventListener('touchstart', function(e) {
     console.log('touchstart');
+    context.notifications.touchStart.dispatch(e);
   }, true);
   document.addEventListener('touchend', function(e) {
     console.log('touchend');
+    context.notifications.touchEnd.dispatch(e);
   }, true);
 
   var update = function() {
     stats.begin();
-    ballMgr.onUpdate();
+    context.notifications.update.dispatch();
     renderer.render(stage);
     requestAnimFrame(update);
     stats.end();
   };
 
   var resize = function() {
-    //var w = $(window).width();
-    //var h = $(window).height();
-    //if (w > 800) w = 800;
-    //if (h > 600) h = 600;
-    //var l = ($(window).width() - w) / 2;
-    //var t = ($(window).height() - h) / 2;
     canWidth = $(window).width();
     canHeight = $(window).height();
     var l = 10;
@@ -79,10 +98,15 @@ requirejs(['ball'], function(ballLib) {
     renderer.resize(w, h);
     stats.domElement.style.left = l + 'px';
     stats.domElement.style.top =  t + 'px';
-    ballMgr.onResize(w, h);
+    context.notifications.resize.dispatch(w, h);
   };
 
   $(window).resize(resize);
+
+  if (currentScene === SceneEnum.ball)
+    ballMgr.start();
+  else if (currentScene === SceneEnum.dragon)
+    dragonInst.start();
 
   resize();
   update();

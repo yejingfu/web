@@ -12,20 +12,19 @@ define(function(){
     this.isAdding = false;
     this.canWidth = 0;
     this.canHeight = 0;
+    this.ntf = null;
   };
   BallMgr.prototype = {
-    init: function(renderer, stage) {
+    init: function(ctx) {
       console.log('BallMgr::init()');
-      this.renderer = renderer;
-      this.stage = stage;
+      this.renderer = ctx.renderer;
+      this.stage = ctx.stage;
+      this.ntf = ctx.notifications;
 
       this.divCounter = document.createElement('div');
       this.divCounter.className = 'counter';
-      document.body.appendChild(this.divCounter);
       
       this.container = new PIXI.SpriteBatch();   // new PIXI.DisplayObjectContainer();
-      this.stage.addChild(this.container);
-
       this.spriteTex = new PIXI.Texture.fromImage('ball32.png');
       for (var i = 0; i < 2; i++) {
         var sprite = this.createSprite();
@@ -37,6 +36,28 @@ define(function(){
         this.divCounterSuffix += '(W)';
       else
         this.divCounterSuffix += '(C)';
+    },
+
+    start: function() {
+      document.body.appendChild(this.divCounter);
+      this.stage.addChild(this.container);
+      var self = this;
+      this.ntf.mouseDown.add(function(e) {
+        self.isAdding = true;
+      });
+      this.ntf.mouseUp.add(function(e) {
+        self.isAdding = false;
+      });
+      this.ntf.resize.add(function(w, h) {
+        self.onResize(w, h);
+      });
+      this.ntf.update.add(function() {
+        self.onUpdate();
+      });
+    },
+
+    stop: function() {
+      // todo
     },
 
     onResize: function(width, height) {
@@ -53,6 +74,7 @@ define(function(){
     },
 
     onUpdate: function() {
+      
       if (this.isAdding) {
         for (var i = 0; i < this.incremental; i++) {
           var sprite = this.createSprite();
@@ -89,14 +111,6 @@ define(function(){
 
     updateCounter: function() {
       this.divCounter.innerHTML = this.sprites.length + this.divCounterSuffix;
-    },
-
-    onMouseDown: function(e) {
-      this.isAdding = true;
-    },
-
-    onMouseUp: function(e) {
-      this.isAdding = false;
     },
 
     createSprite: function() {
