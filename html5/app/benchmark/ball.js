@@ -6,6 +6,7 @@ define(function(){
     this.container = null;
     this.spriteTex = null;
     this.divCounter = null;
+    this.divCounterSuffix = ' balls';
     this.sprites = [];
     this.incremental = 50;
     this.isAdding = false;
@@ -31,6 +32,11 @@ define(function(){
         this.sprites.push(sprite);
         this.container.addChild(sprite);
       }
+
+      if (this.renderer instanceof PIXI.WebGLRenderer)
+        this.divCounterSuffix += '(W)';
+      else
+        this.divCounterSuffix += '(C)';
     },
 
     onResize: function(width, height) {
@@ -82,7 +88,7 @@ define(function(){
     },
 
     updateCounter: function() {
-      this.divCounter.innerHTML = this.sprites.length + ' sprites';
+      this.divCounter.innerHTML = this.sprites.length + this.divCounterSuffix;
     },
 
     onMouseDown: function(e) {
