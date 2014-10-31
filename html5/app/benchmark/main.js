@@ -60,12 +60,18 @@ requirejs(['ball'], function(ballLib) {
   };
 
   var resize = function() {
-    var w = $(window).width();
-    var h = $(window).height();
-    if (w > 800) w = 800;
-    if (h > 600) h = 600;
-    var l = ($(window).width() - w) / 2;
-    var t = ($(window).height() - h) / 2;
+    //var w = $(window).width();
+    //var h = $(window).height();
+    //if (w > 800) w = 800;
+    //if (h > 600) h = 600;
+    //var l = ($(window).width() - w) / 2;
+    //var t = ($(window).height() - h) / 2;
+    canWidth = $(window).width();
+    canHeight = $(window).height();
+    var l = 10;
+    var t = 10;
+    var w = canWidth - 20;
+    var h = canHeight - 20;
     renderer.view.style.left = l + 'px';
     renderer.view.style.top = t + 'px';
     renderer.view.style.width = w + 'px';
