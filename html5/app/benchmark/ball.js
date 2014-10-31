@@ -75,7 +75,6 @@ define(function(){
           if (Math.random() > 0.5)
             sprite.speedY -= Math.random() * 6;
         } else if (sprite.position.y < 0) {
-          debugger;
           sprite.speedY = 0;
           sprite.position.y = 0;
         }

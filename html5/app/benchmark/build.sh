@@ -19,5 +19,5 @@ fi
 r.js -o optimize=uglify2 baseUrl=. name=main out=main.min.js
 
 # 3, create wgt
-zip -r sprites.wgt config.xml indexd.html icon.png main.min.js style.css lib/*
+zip -r sprites.wgt config.xml index.html *.png main.min.js style.css lib/*
 

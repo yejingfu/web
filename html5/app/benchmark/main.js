@@ -9,7 +9,7 @@ requirejs.config({
 });
 
 requirejs(['ball'], function(ballLib) {
-
+  
   var canWidth = 800;
   var canHeight = 600;
   //  var renderer = new PIXI.CanvasRenderer(canWidth, canHeight);
@@ -22,7 +22,7 @@ requirejs(['ball'], function(ballLib) {
     renderer.context.mozImageSmoothingEnabled = false;
     renderer.context.webkitImageSmoothingEnabled = false;
   }
-  //renderer.view.className = 'rendererView';
+  renderer.view.className = 'rendererView';
 
   var stage = new PIXI.Stage(0xFFFFFF);
   
