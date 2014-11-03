@@ -115,7 +115,8 @@ define(function(){
         if (sprite.position.y > this.canHeight) {
           sprite.speedY *= -0.85;
           sprite.position.y = this.canHeight;
-          sprite.spin = (Math.random() - 0.5) * 0.2;
+          //sprite.spin = (Math.random() - 0.5) * 0.2;
+
           if (Math.random() > 0.5)
             sprite.speedY -= Math.random() * 6;
         } else if (sprite.position.y < 0) {
