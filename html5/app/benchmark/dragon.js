@@ -94,7 +94,6 @@ define(function(){
     },
 
     onResize: function(width, height) {
-      console.log('onResize');
       this.canWidth = width;
       this.canHeight = height;
       if (this.imgWidth > this.canWidth) {
