@@ -40,8 +40,10 @@ define(function(){
         // dragon
         self.dragon = new PIXI.Spine('data/dragonbones.anim');
         self.dragon.position.x = self.imgWidth / 3;
-        self.dragon.position.y = self.imgHeight / 2 + 80;
+        self.dragon.position.y = self.imgHeight - self.dragon.height / 2;   //self.imgHeight / 2 + 80;
+        //var rc = self.dragon.getBounds();
         self.dragon.scale.x = self.dragon.scale.y = 0.5;
+        self.dragon.anchor = new PIXI.Point(0.5, 0.5);
         self.dragon.state.setAnimationByName('flying', true);
       });
       this.assetLoader.load();
@@ -67,6 +69,8 @@ define(function(){
 
         self.ntf.update.add(DragonInstance.prototype.onUpdate, self);
         self.ntf.resize.add(DragonInstance.prototype.onResize, self);
+        self.ntf.keyDown.add(DragonInstance.prototype.onKeyDown, self);
+        self.ntf.keyUp.add(DragonInstance.prototype.onKeyUp, self);
       };
 
       if (self.assetLoader.loadCount > 0) {
@@ -91,6 +95,24 @@ define(function(){
       this.stage.removeChild(this.dragon);
       this.ntf.update.remove(DragonInstance.prototype.onUpdate, this);
       this.ntf.resize.remove(DragonInstance.prototype.onResize, this);
+      this.ntf.keyDown.remove(DragonInstance.prototype.onKeyDown, this);
+      this.ntf.keyUp.remove(DragonInstance.prototype.onKeyUp, this);
+    },
+
+    onKeyDown: function(e) {
+      if (e.keyCode === 38) { // arrow up
+        this.dragon.position.y -= 5;
+        if (this.dragon.position.y < this.dragon.height)
+          this.dragon.position.y = this.dragon.height;
+      } else if (e.keyCode === 40) { // arrow down
+        this.dragon.position.y += 5;
+        if (this.dragon.position.y > this.imgHeight)
+          this.dragon.position.y = this.imgHeight;
+      }
+    },
+
+    onKeyUp: function(e) {
+
     },
 
     onResize: function(width, height) {
