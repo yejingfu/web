@@ -49,6 +49,7 @@ define(function(){
       this.ntf.mouseUp.add(BallMgr.prototype.onKeyUp, this);
       this.ntf.resize.add(BallMgr.prototype.onResize, this);
       this.ntf.update.add(BallMgr.prototype.onUpdate, this);
+      this.updateCounter();
     },
 
     stop: function() {

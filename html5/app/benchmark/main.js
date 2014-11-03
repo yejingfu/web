@@ -119,6 +119,7 @@ requirejs(['ball', 'dragon', 'lib/signals'], function(ballLib, dragonLib, sigLib
         ballMgr.start();
     else if (currentScene === SceneEnum.dragon)
         dragonInst.start();
+    resize();
   };
 
   context.notifications.keyDown.add(function(e) {
@@ -128,6 +129,8 @@ requirejs(['ball', 'dragon', 'lib/signals'], function(ballLib, dragonLib, sigLib
     } else if (e.keyCode === 'D'.charCodeAt(0)) {
       currentScene = SceneEnum.dragon;
       changeScene();
+    } else if (e.keyCode === 'R'.charCodeAt(0)) {
+      resize();
     }
   });
   changeScene();
