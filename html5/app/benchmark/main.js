@@ -33,7 +33,9 @@ requirejs(['ball', 'dragon', 'lib/signals'], function(ballLib, dragonLib, sigLib
   //var canHeight = 600;
   //  var renderer = new PIXI.CanvasRenderer(canWidth, canHeight);
   //var renderer = new PIXI.WebGLRenderer(canWidth, canHeight);
-  var renderer = new PIXI.autoDetectRenderer(800, 600);
+  var w = $(window).width();
+  var h = $(window).height();
+  var renderer = new PIXI.autoDetectRenderer(w, h);
   if (renderer instanceof PIXI.WebGLRenderer) {
     console.log('PIXI is using WebGL as renderer engine');
   } else {
@@ -102,6 +104,7 @@ requirejs(['ball', 'dragon', 'lib/signals'], function(ballLib, dragonLib, sigLib
   };
 
   $(window).resize(resize);
+  renderer.resize(w, h);
 
   if (currentScene === SceneEnum.ball)
     ballMgr.start();
