@@ -13,6 +13,7 @@ define(function(){
     this.canWidth = 0;
     this.canHeight = 0;
     this.ntf = null;
+    this.isStarted = false;
   };
   BallMgr.prototype = {
     init: function(ctx) {
@@ -39,25 +40,39 @@ define(function(){
     },
 
     start: function() {
+      if (this.isStarted)
+        return;
+      this.isStarted = true;
       document.body.appendChild(this.divCounter);
       this.stage.addChild(this.container);
-      var self = this;
-      this.ntf.mouseDown.add(function(e) {
-        self.isAdding = true;
-      });
-      this.ntf.mouseUp.add(function(e) {
-        self.isAdding = false;
-      });
-      this.ntf.resize.add(function(w, h) {
-        self.onResize(w, h);
-      });
-      this.ntf.update.add(function() {
-        self.onUpdate();
-      });
+      this.ntf.mouseDown.add(BallMgr.prototype.onKeyDown, this);
+      this.ntf.mouseUp.add(BallMgr.prototype.onKeyUp, this);
+      this.ntf.resize.add(BallMgr.prototype.onResize, this);
+      this.ntf.update.add(BallMgr.prototype.onUpdate, this);
     },
 
     stop: function() {
-      // todo
+      if (!this.isStarted)
+        return;
+      this.isStarted = false;
+      document.body.removeChild(this.divCounter);
+      this.stage.removeChild(this.container);
+      if (this.sprites.length > 2) {
+        this.container.removeChildren(2);  // from #1 to end
+        this.sprites.splice(2, this.sprites.length - 2);
+      }
+      this.ntf.mouseDown.remove(BallMgr.prototype.onKeyDown, this);
+      this.ntf.mouseUp.remove(BallMgr.prototype.onKeyUp, this);
+      this.ntf.resize.remove(BallMgr.prototype.onResize, this);
+      this.ntf.update.remove(BallMgr.prototype.onUpdate, this);
+    },
+
+    onKeyDown: function(e) {
+      this.isAdding = true;
+    },
+
+    onKeyUp: function(e) {
+      this.isAdding = false;
     },
 
     onResize: function(width, height) {

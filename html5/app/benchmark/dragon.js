@@ -65,12 +65,8 @@ define(function(){
 
         self.stage.addChild(self.dragon);
 
-        self.ntf.update.add(function() {
-          self.onUpdate();
-        });
-        self.ntf.resize.add(function(w, h) {
-          self.onResize(w, h);
-        });
+        self.ntf.update.add(DragonInstance.prototype.onUpdate, self);
+        self.ntf.resize.add(DragonInstance.prototype.onResize, self);
       };
 
       if (self.assetLoader.loadCount > 0) {
@@ -86,9 +82,19 @@ define(function(){
       if (!this.started)
         return;
       this.started = false;
+      this.stage.removeChild(this.background);
+      this.stage.removeChild(this.background2);
+      this.stage.removeChild(this.background3);
+      this.stage.removeChild(this.foreground);
+      this.stage.removeChild(this.foreground2);
+      this.stage.removeChild(this.foreground3);
+      this.stage.removeChild(this.dragon);
+      this.ntf.update.remove(DragonInstance.prototype.onUpdate, this);
+      this.ntf.resize.remove(DragonInstance.prototype.onResize, this);
     },
 
     onResize: function(width, height) {
+      console.log('onResize');
       this.canWidth = width;
       this.canHeight = height;
       if (this.imgWidth > this.canWidth) {

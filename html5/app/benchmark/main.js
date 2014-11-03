@@ -15,7 +15,7 @@ requirejs(['ball', 'dragon', 'lib/signals'], function(ballLib, dragonLib, sigLib
     dragon: 'dragon'
   };
 
-  var currentScene = SceneEnum.dragon;
+  var currentScene = SceneEnum.ball;
 
   var context = {};
 
@@ -25,6 +25,8 @@ requirejs(['ball', 'dragon', 'lib/signals'], function(ballLib, dragonLib, sigLib
     mouseMove: new sigLib.Signal(),
     touchStart: new sigLib.Signal(),
     touchEnd: new sigLib.Signal(),
+    keyDown: new sigLib.Signal(),
+    keyUp: new sigLib.Signal(),
     resize: new sigLib.Signal(),
     update: new sigLib.Signal()
   };
@@ -77,6 +79,12 @@ requirejs(['ball', 'dragon', 'lib/signals'], function(ballLib, dragonLib, sigLib
     console.log('touchend');
     context.notifications.touchEnd.dispatch(e);
   }, true);
+  document.addEventListener('keydown', function(e) {
+    context.notifications.keyDown.dispatch(e);
+  }, true);
+  document.addEventListener('keyup', function(e) {
+    context.notifications.keyUp.dispatch(e);
+  }, true);
 
   var update = function() {
     stats.begin();
@@ -102,15 +110,28 @@ requirejs(['ball', 'dragon', 'lib/signals'], function(ballLib, dragonLib, sigLib
     stats.domElement.style.top =  t + 'px';
     context.notifications.resize.dispatch(w, h);
   };
+  $(window).resize(resize);  // event binding
 
-  $(window).resize(resize);
-  renderer.resize(w, h);
+  var changeScene = function() {
+    ballMgr.stop();
+    dragonInst.stop();
+    if (currentScene === SceneEnum.ball)
+        ballMgr.start();
+    else if (currentScene === SceneEnum.dragon)
+        dragonInst.start();
+  };
 
-  if (currentScene === SceneEnum.ball)
-    ballMgr.start();
-  else if (currentScene === SceneEnum.dragon)
-    dragonInst.start();
-
+  context.notifications.keyDown.add(function(e) {
+    if (e.keyCode === 'B'.charCodeAt(0)) {
+      currentScene = SceneEnum.ball;
+      changeScene();
+    } else if (e.keyCode === 'D'.charCodeAt(0)) {
+      currentScene = SceneEnum.dragon;
+      changeScene();
+    }
+  });
+  changeScene();
+  
   resize();
   update();
 
