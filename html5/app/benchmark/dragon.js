@@ -15,6 +15,8 @@ define(function(){
     this.foreground3 = null;
     this.dragon = null;
     this.ntf = null;
+    this.sliderbar = null;
+    this.bigNumber = Math.pow(10, 4);
     this.started = false;
   };
   DragonInstance.prototype.constructor = DragonInstance;
@@ -54,6 +56,7 @@ define(function(){
       if (this.started)
         return true;
       this.started = true;
+      this.showSlider();
       var _onStart = function() {
         self.stage.addChild(self.background);
         self.stage.addChild(self.background2);
@@ -86,6 +89,7 @@ define(function(){
       if (!this.started)
         return;
       this.started = false;
+      this.hideSlider();
       this.stage.removeChild(this.background);
       this.stage.removeChild(this.background2);
       this.stage.removeChild(this.background3);
@@ -142,6 +146,8 @@ define(function(){
 
     onUpdate: function() {
       var self = this;
+      //self.isPrime(self.bigNumber);
+      self.factorial(self.bigNumber);
       var setPosition = function(p1, p2, p3, delta) {
         p1.position.x -= delta;
         if (self.imgWidth < this.canWidth) {
@@ -171,10 +177,80 @@ define(function(){
 
       setPosition(this.background, this.background2, this.background3, 6);
       setPosition(this.foreground, this.foreground2, this.foreground3, 10);
+    },
 
+    showSlider: function() {
+      var self = this;
+      if (!this.sliderbar) {
+        var html = '<div id="sliderContainer" style="position:absolute; visibility:hidden;">'+
+                   '<p><input type="text" id="slideramount" readonly style="border:0; opacity:0.4; width:50px;"></p>'+
+                   '<div id="divSliderbar" style="height:100px; width:8px;"></div></div>';
+        $('body').append(html);
+        this.sliderbar = $('#sliderContainer');
+        this.sliderbar.offset({left: 20, top: 60});
+        $('#divSliderbar').slider({
+          orientation: 'vertical',
+          range: 'min',
+          min: self.bigNumber,
+          max: Math.pow(10, 6),
+          value: self.bigNumber,
+          slide: function(event, ui) {
+            $('#slideramount').val(ui.value);
+            self.bigNumber = ui.value;
+          }
+        });
+        $('#slideramount').val($('#divSliderbar').slider('value'));
+      }
+      this.sliderbar.css('visibility', 'visible');
+    },
 
+    hideSlider: function() {
+      if (this.sliderbar) {
+        this.sliderbar.css('visibility', 'hidden');
+      }
+    },
 
+    isPrime: function(n, speed) {
+      if (speed === 'fast') {
+        if (isNaN(n) || !isFinite(n) || n%1 || n<2) return false; 
+        if (n%2==0) return (n==2);
+        if (n%3==0) return (n==3);
+        var m=Math.sqrt(n);
+        for (var i=5;i<=m;i+=6) {
+          if (n%i==0)     return false;
+          if (n%(i+2)==0) return false;
+        }
+        return true;
+      } else if (speed === 'middle') {
+        if (isNaN(n) || !isFinite(n) || n%1 || n<2) return false; 
+        if (n%2==0) return (n==2);
+        var m=Math.sqrt(n);
+        for (var i=3;i<=m;i+=2) {
+          if (n%i==0) return false;
+        }
+        return true;
+      } else { // 'slow' 
+        if (isNaN(n) || !isFinite(n) || n%1 || n<2) return false; 
+        var m=Math.sqrt(n);
+        for (var i=2;i<=m;i++) if (n%i==0) return false;
+        return true;
+      }
+    },
 
+    factorial: function(n) {
+      /*
+      if (n < 0 || n == 0 || n == 1) {
+        return 1;
+      } else {
+        return this.factorial(n-1) * n;   // return n * factoriala(n-1)
+      }
+      */
+      var total = 1;
+      for (var i = 2; i <= n; i++) {
+        if (this.isPrime(i))
+          total *= i;
+      }
+      return total;
     }
 
   };
