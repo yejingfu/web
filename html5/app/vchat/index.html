@@ -1,0 +1,60 @@
+<!DOCTYPE html><!--HTML5 doctype-->
+<html>
+<head>
+  <title>VChat -- Video Chat</title>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <link rel="stylesheet" type="text/css" href="lib/bootstrap.min.css"></link>
+  <link rel="stylesheet" type="text/css" href="css/main.css"></link>
+</head>
+<body>
+
+  <!-- navigator bar -->
+  <div class="navbar-static-top site-topbar" role="navigation">
+    <div class="container">
+      <div class="navbar-header">
+        <a style="text-decoration: none;" href="/vchat">VChat</a>
+        <span class="sep">|</span>
+        <a id="btnCaptureLocal" style="text-decoration: none;" href="javascript:;">capture</a>
+        <span class="sep">|</span>
+        <a id="btnRoomCreate" style="text-decoration: none;" href="javascript:;">create</a>
+        <span class="sep">|</span>
+        <a id="btnRoomJoin" style="text-decoration: none;" href="javascript:;">join</a>
+        <span class="sep">|</span>
+        <a id="btnRoomLeave" style="text-decoration: none;" href="javascript:;">leave</a>
+        <span class="sep">|</span>
+        <a id="btnSysHelp" style="text-decoration: none;" href="javascript:;">help</a>
+      </div>
+      <div id="account-signin-signup" class="topbar-info col-xs-pull-1" style="position:absolute; margin-top:0px;" >
+        <a id="account-signin" style="text-decoration: none;"  href="javascript:;">account</a>
+		<span class="sep">|</span>
+		<a id="account-signup" style="text-decoration: none;" href="javascript:;">?</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- main panel -->
+  <div class="mainarea" role="main">
+    <row>
+      <div class="col-xs-12 col-xs-offset-0">
+        <div class="panel panel-default">
+          <div class="panel-body" style="padding:0px; margin:0px;">
+            <div id="video-container" style="background-color:#3c3c3c;">
+              <video id="video_main" autoplay="autoplay"></video>
+            </div>
+          </div>
+        </div>
+      </div>
+    </row>
+  </div>
+
+  <div id="divVideoList"></div>
+
+  <div id="divLogger" class="logger"></div>
+
+</body>
+<!-- script src="http://ec2-50-17-69-205.compute-1.amazonaws.com:5238/socket.io/socket.io.js"></script -->
+<script src="lib/jquery-2.0.3.min.js"></script>
+<script src="lib/bootstrap.min.js"></script>
+<script src="js/main.js"></script>
+</html>
+
