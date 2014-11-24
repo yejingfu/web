@@ -212,11 +212,12 @@ Application.prototype = {
 
   leaveRoom: function() {
     console.log('leaveRoom');
-    if (!this.room)
-      return;
-    this.room = undefined;
-    $('#divVideoList').empty();
-    this.mainVideo.src = undefined;
+    //if (!this.room)
+    //  return;
+    //this.room = undefined;
+    //$('#divVideoList').empty();
+    //this.mainVideo.src = undefined;
+    location.reload();
   },
 
   checkWebRTCSupport: function() {
