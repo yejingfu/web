@@ -36,6 +36,7 @@ var Application = function() {
   this.smallVideoHeight = 120;
   this.smallVideoMargin = 4;
 
+  this.orientation = '';
   this.isChannelReady;
   this.isInitiator = false;
   this.isStarted = false;
@@ -105,6 +106,7 @@ Application.prototype = {
     $('#video_'+idx).click(function() {
       self.selectVideo(idx);
     });
+    self.onChildVideoItemAdded();
     return idx;
   },
 
@@ -285,7 +287,6 @@ Application.prototype = {
     if (self.mainStream === self.localStream) {
       self.selectVideo(idx);
     }
-    self.onWinResize();
   },
 
   onRemoteDisconnected: function(sockid) {
@@ -326,19 +327,18 @@ Application.prototype = {
       var cRatio = cWidth / cHeight;
       var vTop = 0;
       var vLeft = 0;
-      if (cRatio > vRatio) {
+      this.orientation = (cRatio > vRatio) ? 'landscape' : 'portrait';
+      if (this.orientation === 'landscape') {
         vHeight = cHeight;
         vWidth = Math.floor(vHeight * vRatio);
         vLeft = Math.floor((cWidth - vWidth - listItemWidth) / 2);
         if (vLeft < 0) vLeft = 0;
-      } else {
+      } else if (this.orientation === 'portrait') {
         vWidth = cWidth;
         vHeight = Math.floor(vWidth / vRatio);
         vTop = Math.floor((cHeight - vHeight - listItemHeight) / 2);
         if (vTop < 0) vTop = 0;
       }
-      //this.mainVideo.clientTop = vTop;
-      //this.mainVideo.clientLeft = vLeft;
       this.mainVideo.width = vWidth;
       this.mainVideo.height = vHeight;
       $(this.mainVideo).css({left: vLeft, top: vTop, position:'relative'});
@@ -349,11 +349,11 @@ Application.prototype = {
     var listLeft = cOffset.left || 20;
     var listWidth = listItemWidth;
     var listHeight = listItemHeight;
-    if (cRatio > vRatio) {
+    if (this.orientation === 'landscape') {
       // place at right side
       listLeft += cWidth - listItemWidth;
       listHeight = cHeight;
-    } else {
+    } else if (this.orientation === 'portrait') {
       // place at bottom side
       listTop += cHeight - listItemHeight;
       listWidth = cWidth;
@@ -362,6 +362,8 @@ Application.prototype = {
     listHeight -= 2;
     $('#divVideoList').width(listWidth).height(listHeight).css({top: listTop, left:listLeft});
 
+    this.onChildVideoItemAdded();
+/*
     // list items position
     var children = $('#divVideoList').children();
     if (cRatio > vRatio) {
@@ -370,6 +372,25 @@ Application.prototype = {
         $(child).css({top: listItemHeight * i, left: 0});
       }
     } else {
+      for (var i = 0, len = children.length; i < len; i++) {
+        var child = children[i];
+        $(child).css({top: 0, left: listItemWidth * i});
+      }
+    }
+*/
+  },
+
+  onChildVideoItemAdded: function () {
+    // list items position
+    var listItemWidth = this.smallVideoWidth + this.smallVideoMargin * 2;
+    var listItemHeight = this.smallVideoHeight + this.smallVideoMargin * 2;
+    var children = $('#divVideoList').children();
+    if (this.orientation === 'landscape') {
+      for (var i = 0, len = children.length; i < len; i++) {
+        var child = children[i];
+        $(child).css({top: listItemHeight * i, left: 0});
+      }
+    } else if (this.orientation === 'portrait') {
       for (var i = 0, len = children.length; i < len; i++) {
         var child = children[i];
         $(child).css({top: 0, left: listItemWidth * i});
