@@ -186,6 +186,8 @@ Application.prototype = {
     var self = this;
     console.log('joinRoom');
     var doJoinRoom = function(room) {
+      if (self.room === room)
+        return;
       if (self.room)
         self.leaveRoom();
       if (room) {
