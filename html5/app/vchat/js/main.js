@@ -1,7 +1,7 @@
 
 $(document).ready(function() {
 
-  var app = new Application();
+  window.app = new Application();
 
   $(window).resize(function(w, h) {
     app.onWinResize();
@@ -76,9 +76,6 @@ var Application = function() {
 Application.prototype = {
   init: function() {
     var self = this;
-    self.mainVideo = $('#video_main')[0];
-    self.mainVideo.onresize = function() {self.onWinResize();};
-
     $('#btnCaptureLocal').click(function() { self.captureLocalVideo(); });
     $('#btnRoomCreate').click(function() { self.createRoom(); });
     $('#btnRoomJoin').click(function() { self.joinRoom(); });
@@ -106,7 +103,7 @@ Application.prototype = {
     $('#video_'+idx).click(function() {
       self.selectVideo(idx);
     });
-    self.onChildVideoItemAdded();
+    self.onChildVideoItemUpdate();
     return idx;
   },
 
@@ -189,6 +186,8 @@ Application.prototype = {
     var self = this;
     console.log('joinRoom');
     var doJoinRoom = function(room) {
+      if (self.room)
+        self.leaveRoom();
       if (room) {
         Util.print('join room now:' + room, 'join', true);
         self.connect(room);
@@ -212,12 +211,36 @@ Application.prototype = {
 
   leaveRoom: function() {
     console.log('leaveRoom');
-    //if (!this.room)
-    //  return;
-    //this.room = undefined;
-    //$('#divVideoList').empty();
-    //this.mainVideo.src = undefined;
-    location.reload();
+    //location.reload();
+
+    this.room = undefined;
+    var stop = function(stream) {
+      if (typeof stream.stop === 'function') {
+        stream.stop();
+      }
+      else if (typeof stream.getAudioTracks === 'function') {
+        stream.getAudioTracks()[0].stop();
+        stream.getVideoTracks()[0].stop();
+      }
+    }
+    for (var k in this.remoteStreams) {
+      stop(this.remoteStreams[k][1]);
+    }
+    this.remoteStream = {};
+    this.localStream = null;
+    this.mainVideo = null;
+    $('#video-container').empty();
+    $('#divVideoList').empty();
+
+    if (rtc._socket) {
+      rtc._socket.close();
+      rtc.peerConnections = {};
+      rtc.connections = [];
+      rtc.streams = [];
+      rtc.numStreams = 0;
+      rtc.initializedStreams = 0;
+      rtc.dataChannels = {};
+    }
   },
 
   checkWebRTCSupport: function() {
@@ -232,6 +255,12 @@ Application.prototype = {
 
   attachMainStream: function(stream) {
     var self = this;
+    if (!self.mainVideo) {
+      var html = '<video id="video_main" autoplay="autoplay"></video>';
+      $('#video-container').append(html);
+      self.mainVideo = $('#video_main')[0];
+      self.mainVideo.onresize = function() {self.onWinResize();};
+    }
     self.attachStream(stream, self.mainVideo);
     //self.selectVideo(idx);
     self.mainStream = stream;
@@ -280,6 +309,17 @@ Application.prototype = {
 
   onRemoteConnected: function(stream, sockid) {
     var self = this;
+    var exists = false;
+    for (var k in self.remtoeStreams) {
+      if (self.remoteStreams[k][0] === sockid) {
+        exists = true;
+        break;
+      }
+    }
+    if (exists) {
+      cosole.error('todo: duplicated stream!');
+      return;
+    }
     var msg = 'Remote guest is joined: ' + sockid;
     console.log(msg);
     Util.print(msg);
@@ -288,6 +328,7 @@ Application.prototype = {
     if (self.mainStream === self.localStream) {
       self.selectVideo(idx);
     }
+    self.onChildVideoItemUpdate();
   },
 
   onRemoteDisconnected: function(sockid) {
@@ -316,8 +357,8 @@ Application.prototype = {
     $('#video-container').height($(window).height() - $('body').offset().top - 60);
 
     // set position & size of the main video
-    var vWidth = this.mainVideo.videoWidth;
-    var vHeight = this.mainVideo.videoHeight;
+    var vWidth = this.mainVideo ? this.mainVideo.videoWidth : 0;
+    var vHeight = this.mainVideo ? this.mainVideo.videoHeight : 0;
     var cWidth = $('#video-container').width();
     var cHeight = $('#video-container').height();
     var cOffset = $('#video-container').offset();
@@ -343,27 +384,28 @@ Application.prototype = {
       this.mainVideo.width = vWidth;
       this.mainVideo.height = vHeight;
       $(this.mainVideo).css({left: vLeft, top: vTop, position:'relative'});
-    }
 
-    // set the position & size of video list
-    var listTop = cOffset.top;
-    var listLeft = cOffset.left || 20;
-    var listWidth = listItemWidth;
-    var listHeight = listItemHeight;
-    if (this.orientation === 'landscape') {
-      // place at right side
-      listLeft += cWidth - listItemWidth;
-      listHeight = cHeight;
-    } else if (this.orientation === 'portrait') {
-      // place at bottom side
-      listTop += cHeight - listItemHeight;
-      listWidth = cWidth;
-    }
-    listWidth -= 2;
-    listHeight -= 2;
-    $('#divVideoList').width(listWidth).height(listHeight).css({top: listTop, left:listLeft});
 
-    this.onChildVideoItemAdded();
+      // set the position & size of video list
+      var listTop = cOffset.top;
+      var listLeft = cOffset.left || 20;
+      var listWidth = listItemWidth;
+      var listHeight = listItemHeight;
+      if (this.orientation === 'landscape') {
+        // place at right side
+        listLeft += cWidth - listItemWidth;
+        listHeight = cHeight;
+      } else if (this.orientation === 'portrait') {
+        // place at bottom side
+        listTop += cHeight - listItemHeight;
+        listWidth = cWidth;
+      }
+      listWidth -= 2;
+      listHeight -= 2;
+      $('#divVideoList').width(listWidth).height(listHeight).css({top: listTop, left:listLeft});
+
+      this.onChildVideoItemUpdate();
+    }
 /*
     // list items position
     var children = $('#divVideoList').children();
@@ -381,7 +423,7 @@ Application.prototype = {
 */
   },
 
-  onChildVideoItemAdded: function () {
+  onChildVideoItemUpdate: function () {
     // list items position
     var listItemWidth = this.smallVideoWidth + this.smallVideoMargin * 2;
     var listItemHeight = this.smallVideoHeight + this.smallVideoMargin * 2;
