@@ -46,8 +46,8 @@ var Application = function() {
 
   this.pc;
   this.turnReady;
-  this.socket = '';
-  this.room = '';
+  this.socket = undefined;
+  this.room = undefined;
   this.constraints = {
     video: true,
     audio: true
@@ -110,7 +110,7 @@ Application.prototype = {
 
   removeVideoFromList: function(idx) {
     if (idx >= 0 && idx < $('#divVideoList').children().length) {
-      $('#video_'+idx).remove();
+      $('#videoListItem_'+idx).remove();
     }
   },
 
@@ -123,12 +123,15 @@ Application.prototype = {
         $('#video_'+i).removeClass('selected');
       }
       $('#video_'+idx).addClass('selected');
+      this.attachMainStream(this.remoteStreams[idx][1]);
     }
   },
 
-  captureLocalVideo: function() {
+  captureLocalVideo: function(cb) {
+    if (!this.checkWebRTCSupport()) return;
     var self = this;
     Util.print('capture video', 'local', true);
+/*
     navigator.getUserMedia(self.constraints, 
       function(stream) {
         self.localStream = stream;
@@ -139,9 +142,27 @@ Application.prototype = {
         Util.print('Failed to capture video from local camera');
       }
     );
+*/
+    rtc.createStream(self.constraints,
+      function(stream) {
+        self.localStream = stream;
+        var idx = self.appendVideoToList(self.localStream);
+        self.remoteStreams[idx] = [undefined, self.localStream];
+        self.selectVideo(idx);
+        if (cb && typeof cb === 'function') {
+          cb(stream);
+        }
+      },
+      function(err) {
+        Util.print('Failed to capture video from local camera');
+        if (cb && typeof cb === 'function') {
+          cb(undefined);
+        }
+    });
   },
 
   createRoom: function() {
+    if (!this.checkWebRTCSupport()) return;
     var self = this;
     console.log('createRoom');
     Util.print('begin create room...', 'create', true);
@@ -162,6 +183,7 @@ Application.prototype = {
   },
 
   joinRoom: function(roomId) {
+    if (!this.checkWebRTCSupport()) return;
     var self = this;
     console.log('joinRoom');
     var doJoinRoom = function(room) {
@@ -188,12 +210,27 @@ Application.prototype = {
 
   leaveRoom: function() {
     console.log('leaveRoom');
+    if (!this.room)
+      return;
+    this.room = undefined;
+    $('#divVideoList').empty();
+    this.mainVideo.src = undefined;
   },
 
-  attachMainStream: function(idx, stream) {
+  checkWebRTCSupport: function() {
+    if (!navigator.getUserMedia || !rtc.dataChannelSupport) {
+      Util.showDialog('dlgNotSupport', 'Not Support', '<div>The browser does not support video chatting.</div>' +
+        '<div>Please make sure the Camera is installed and use Chrome or FireFox!</div>',
+        undefined, {caption:'Okay'});
+      return false;
+    }
+    return true;
+  },
+
+  attachMainStream: function(stream) {
     var self = this;
     self.attachStream(stream, self.mainVideo);
-    self.selectVideo(idx);
+    //self.selectVideo(idx);
     self.mainStream = stream;
   },
 
@@ -214,24 +251,28 @@ Application.prototype = {
       console.log('TODO: how to handle if room is empty?');
       return;
     }
-    self.room = room;  // '46a910fc-d481-41e1-b06c-26cb9a9e62c4'; 
-    rtc.createStream(self.constraints,
-      function(stream) {
-        self.localStream = stream;
-        var idx = self.appendVideoToList(self.localStream);
-        self.attachMainStream(idx, stream);
-      },
-      function(err) {
-        Util.print('Failed to capture video from local camera');
-    });
-    rtc.connect(self.rtcServer, self.room);
-    rtc.on('add remote stream', function(stream, socId) {
-      self.onRemoteConnected(stream, socId);
-    });
+    
+    var doConnect = function() {
+      self.room = room;  // '46a910fc-d481-41e1-b06c-26cb9a9e62c4';
+      rtc.connect(self.rtcServer, self.room);
 
-    rtc.on('disconnect stream', function(socId) {
-      self.onRemoteDisconnected(socId);
-    });
+      rtc.on('add remote stream', function(stream, socId) {
+        self.onRemoteConnected(stream, socId);
+      });
+
+      rtc.on('disconnect stream', function(socId) {
+        self.onRemoteDisconnected(socId);
+      });
+    };
+
+    if (!self.localStream) {
+      self.captureLocalVideo(function(stream) {
+        if (stream) 
+          doConnect();
+      });
+    } else {
+      doConnect();
+    }
   },
 
   onRemoteConnected: function(stream, sockid) {
@@ -242,7 +283,7 @@ Application.prototype = {
     var idx = self.appendVideoToList(stream);
     self.remoteStreams[idx] = [sockid, stream];
     if (self.mainStream === self.localStream) {
-      self.attachMainStream(idx, stream);
+      self.selectVideo(idx);
     }
     self.onWinResize();
   },
@@ -253,16 +294,17 @@ Application.prototype = {
     console.log(msg);
     Util.print(msg);
     var idx = -1;
-    var remoteStream = null;
     for (var k in self.remoteStreams) {
       if (self.remoteStreams[k][0] === sockid) {
         idx = k;
         break;
       }
     }
-    if (idx >= 0 && (remoteStream  = self.remoteStreams[idx])) {
+    if (idx >= 0) {
+      var remoteStream  = self.remoteStreams[idx];
       self.removeVideoFromList(idx);
-      if (self.mainStream === remoteStream) {
+      delete self.remoteStreams[idx];
+      if (self.mainStream === remoteStream[1]) {
         self.selectVideo();  // select last one
       }
     }
