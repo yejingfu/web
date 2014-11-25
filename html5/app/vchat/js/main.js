@@ -80,6 +80,7 @@ Application.prototype = {
     $('#btnRoomCreate').click(function() { self.createRoom(); });
     $('#btnRoomJoin').click(function() { self.joinRoom(); });
     $('#btnRoomLeave').click(function() { self.leaveRoom(); });
+    $('#btnSysHelp').click(function() { self.showHelp(); });
 
     self.onWinResize();
   },
@@ -87,6 +88,13 @@ Application.prototype = {
   exit: function() {
     this.sendMessage('bye');
     alert('bye');
+  },
+
+  showHelp: function() {
+    var html = '<div>This is developped by WebRTC technology, allowing many users '+
+        'to setup a video room for real-time chatting. <br>'+
+        'It could be used for online meeting, online education, mutliple sites communication.</div>';
+    Util.showDialog('dlgSysHelp', 'Video Chat', html, undefined, {caption: 'Enjoy'}); 
   },
 
   appendVideoToList: function(stream) {
