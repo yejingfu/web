@@ -4,10 +4,10 @@ $(document).ready(function() {
   window.app = new Application();
 
   $(window).resize(function(w, h) {
-    app.onWinResize();
+    app.onWinResize(w, h);
   });
 
-  $(window).unload(function(e) {
+  $(window).unload(function(/*e*/) {
     app.exit();
   });
 
@@ -37,7 +37,7 @@ var Application = function() {
   this.smallVideoMargin = 4;
 
   this.orientation = '';
-  this.isChannelReady;
+  this.isChannelReady = false;
   this.isInitiator = false;
   this.isStarted = false;
 
@@ -45,8 +45,8 @@ var Application = function() {
   this.remoteStreams = {};  // idx - [sockid, stream]
   this.mainStream = null;
 
-  this.pc;
-  this.turnReady;
+  this.pc = undefined;
+  this.turnReady = false;
   this.socket = undefined;
   this.room = undefined;
   this.constraints = {
@@ -153,7 +153,8 @@ Application.prototype = {
         }
       },
       function(err) {
-        Util.print('Failed to capture video from local camera');
+        Util.print('Failed to capture video from local camera.');
+        console.log('Failed to capture video from local camera: '+err);
         if (cb && typeof cb === 'function') {
           cb(undefined);
         }
@@ -224,7 +225,7 @@ Application.prototype = {
         stream.getAudioTracks()[0].stop();
         stream.getVideoTracks()[0].stop();
       }
-    }
+    };
     for (var k in this.remoteStreams) {
       stop(this.remoteStreams[k][1]);
     }
@@ -238,7 +239,7 @@ Application.prototype = {
       rtc.fire('disconnect stream', rtc._me);
       rtc._socket.close();
 
-      for (var k in rtc.peerConnections) {
+      for (k in rtc.peerConnections) {
         rtc.peerConnections[k].close();
       }
       rtc.peerConnections = {};
@@ -361,7 +362,7 @@ Application.prototype = {
     }
   },
 
-  onWinResize: function() {
+  onWinResize: function(/*winWidth, winHeight*/) {
     $('#video-container').height($(window).height() - $('body').offset().top - 60);
 
     // set position & size of the main video
@@ -436,14 +437,15 @@ Application.prototype = {
     var listItemWidth = this.smallVideoWidth + this.smallVideoMargin * 2;
     var listItemHeight = this.smallVideoHeight + this.smallVideoMargin * 2;
     var children = $('#divVideoList').children();
+    var i, len, child;
     if (this.orientation === 'landscape') {
-      for (var i = 0, len = children.length; i < len; i++) {
-        var child = children[i];
+      for (i = 0, len = children.length; i < len; i++) {
+        child = children[i];
         $(child).css({top: listItemHeight * i, left: 0});
       }
     } else if (this.orientation === 'portrait') {
-      for (var i = 0, len = children.length; i < len; i++) {
-        var child = children[i];
+      for (i = 0, len = children.length; i < len; i++) {
+        child = children[i];
         $(child).css({top: 0, left: listItemWidth * i});
       }
     }
