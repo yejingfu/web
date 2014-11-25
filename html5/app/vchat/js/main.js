@@ -228,14 +228,19 @@ Application.prototype = {
     for (var k in this.remoteStreams) {
       stop(this.remoteStreams[k][1]);
     }
-    this.remoteStream = {};
+    this.remoteStreams = {};
     this.localStream = null;
     this.mainVideo = null;
     $('#video-container').empty();
     $('#divVideoList').empty();
 
     if (rtc._socket) {
+      rtc.fire('disconnect stream', rtc._me);
       rtc._socket.close();
+
+      for (var k in rtc.peerConnections) {
+        rtc.peerConnections[k].close();
+      }
       rtc.peerConnections = {};
       rtc.connections = [];
       rtc.streams = [];
@@ -312,14 +317,15 @@ Application.prototype = {
   onRemoteConnected: function(stream, sockid) {
     var self = this;
     var exists = false;
-    for (var k in self.remtoeStreams) {
+
+    for (var k in self.remoteStreams) {
       if (self.remoteStreams[k][0] === sockid) {
         exists = true;
         break;
       }
     }
     if (exists) {
-      cosole.error('todo: duplicated stream!');
+      console.warn('todo: duplicated stream!');
       return;
     }
     var msg = 'Remote guest is joined: ' + sockid;
