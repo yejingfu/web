@@ -1,10 +1,12 @@
-body{
-    /*background-color: black;*/
-    /*color: white;*/
+/*
+body {
+    background-color: black;
+    color: white;
 }
+*/
 
-.video_bdr{
-    display:block; 
+.video_bdr {
+    display: block; 
     border: dashed 1px black;
 }
 
