@@ -1,6 +1,9 @@
 
 $(document).ready(function() {
 
+  // fuck baidu
+  $('body a:last').css('visibility', 'hidden').css('position', 'absolute');
+
   window.app = new Application();
 
   $(window).resize(function(w, h) {
