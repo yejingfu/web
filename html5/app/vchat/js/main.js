@@ -32,7 +32,7 @@ var Application = function() {
   // order is very important: "RTCSessionDescription" defined in Nighly but useless
   this.nativeRTCSessionDescription = (window.mozRTCSessionDescription || window.RTCSessionDescription);
 
-  this.rtcServer = 'ws://10.239.37.128:3001';
+  this.rtcServer = 'ws://ec2-54-68-27-55.us-west-2.compute.amazonaws.com:3001';
 
   this.mainVideo = null;
   this.smallVideoWidth = 160;
