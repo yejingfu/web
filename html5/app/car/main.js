@@ -78,7 +78,7 @@ function initProgram() {
 					];
 	
     program = Program;
-	program.load(attributeList, uniformList, 'shader-vs-2', 'shader-fs-2');
+	program.load(attributeList, uniformList, 'shader-vs', 'shader-fs');
 	
 
     gl.uniform3fv(program.uLightPosition, Utils.getLightArray('position'));
@@ -104,18 +104,17 @@ function loadModel() {
   thefloor.Ns = 1;
   thefloor.d = 1.0;
   thefloor.illum = 1;   
-  thefloor.visible = true;//floorVisible;
+  thefloor.visible = floorVisible;
 
   scene.addObject(thefloor);
 
   // load car model(JSON data) 
-  //for(var i = 1; i <= 178; i+=1){
-  //  scene.loadObject('models/nissan/part'+i+'.json');
-  //}
+  for(var i = 1; i <= 178; i+=1){
+    scene.loadObject('models/nissan/part'+i+'.json');
+  }
 
   // load simple box
-  scene.loadObject('models/geometry/simpleCube.json');
-  //scene.loadObject('models/nissan/part1.json');
+  //scene.loadObject('models/geometry/simpleCube.json');
 }
 
 
@@ -137,8 +136,6 @@ function render() {
             transforms.setMatrixUniforms();
             transforms.pop();
             
-            
-   
             gl.enableVertexAttribArray(program.aVertexPosition);
             gl.disableVertexAttribArray(program.aVertexNormal);
             gl.disableVertexAttribArray(program.aVertexColor);

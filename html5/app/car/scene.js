@@ -77,13 +77,19 @@ Scene.prototype = {
         }
 		
         // vertex texture coord (UV, ST)
-		var textureBufferObject;
+		var textureBufferObject, tangentBufferObject;
 		if (object.texture_coords){
 			console.info('the object '+object.name+' has texture coordinates');
 			textureBufferObject = gl.createBuffer();
 			gl.bindBuffer(gl.ARRAY_BUFFER, textureBufferObject);
 			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(object.texture_coords), gl.STATIC_DRAW);
 			object.tbo = textureBufferObject;
+
+            tangentBufferObject = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, tangentBufferObject);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(Utils.calculateTangents(object.vertices, object.texture_coords, object.indices)), gl.STATIC_DRAW);
+            gl.bindBuffer(gl.ARRAY_BUFFER,null);
+            object.tanbo = tangentBufferObject;
 		}
         
         // texture
