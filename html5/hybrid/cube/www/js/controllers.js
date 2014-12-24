@@ -25,4 +25,17 @@ angular.module('starter.controllers', [])
   $scope.settings = {
     enableFriends: true
   };
-});
+})
+
+.controller('ShowcaseCtrl', function($scope, Friends, Cube) {
+  var gl = Cube.initialize('cube-canvas');
+  if (gl) {
+    $scope.support = 'OK';
+  } else {
+    $scope.support = 'Failed';
+  }
+
+})
+
+;
+

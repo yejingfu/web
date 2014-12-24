@@ -18,6 +18,16 @@
     <!-- cordova script (this will be a 404 during development) -->
     <script src="cordova.js"></script>
 
+
+<script src='lib/jquery-1.5.1.min.js'></script>
+<script src='lib/gl-matrix-min.js'></script>
+
+<script src='lib/util.js'></script>
+<script src='lib/scene.js'></script>
+<script src='lib/program.js'></script>
+<script src='lib/camera.js'></script>
+<script src='lib/texture.js'></script>
+
     <!-- your app's js -->
     <script src="js/app.js"></script>
     <script src="js/controllers.js"></script>
@@ -39,3 +49,97 @@
     <ion-nav-view></ion-nav-view>
   </body>
 </html>
+
+<script id="shader-vs" type="x-shader/x-vertex">
+//geometry
+attribute vec3 aVertexPosition;
+attribute vec3 aVertexNormal;
+attribute vec3 aVertexTangent;
+attribute vec4 aVertexColor;
+attribute vec2 aVertexTextureCoords;
+
+//matrices
+uniform mat4 uMVMatrix;
+uniform mat4 uPMatrix;
+uniform mat4 uNMatrix;
+
+//lights
+uniform vec3 uLightPosition;
+
+//varyings
+varying vec2 vTextureCoord;
+varying vec3 vTangentLightDir;
+varying vec3 vTangentEyeDir;
+
+void main(void) {
+    //Transformed vertex position
+    vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);
+
+    //Transformed normal position
+    vec3 normal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+    vec3 tangent = vec3(uNMatrix * vec4(aVertexTangent, 1.0));
+    vec3 bitangent = cross(normal, tangent);
+
+    mat3 tbnMatrix = mat3(
+        tangent.x, bitangent.x, normal.x,
+        tangent.y, bitangent.y, normal.y,
+        tangent.z, bitangent.z, normal.z
+    );
+
+    //light direction, from light position to vertex
+    vec3 lightDirection = uLightPosition - vertex.xyz;
+
+    //eye direction, from camera position to vertex
+    vec3 eyeDirection = -vertex.xyz;
+ 
+    //Final vertex position
+    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+    vTextureCoord = aVertexTextureCoords;
+    vTangentLightDir = lightDirection * tbnMatrix;
+    vTangentEyeDir = eyeDirection * tbnMatrix;
+}
+</script>
+
+<script id="shader-fs" type="x-shader/x-fragment">
+precision highp float;
+
+//geometry
+uniform vec4 uMaterialDiffuse;
+uniform vec4 uMaterialAmbient;
+
+uniform vec4 uLightAmbient;
+uniform vec4 uLightDiffuse;
+
+//samplers
+uniform sampler2D uSampler;
+uniform sampler2D uNormalSampler;
+
+//varying
+varying vec4 vColor;
+varying vec2 vTextureCoord;
+varying vec3 vTangentLightDir;
+varying vec3 vTangentEyeDir;
+
+void main(void)
+{   
+    // Unpack tangent-space normal from texture
+    vec3 normal = normalize(2.0 * (texture2D(uNormalSampler, vTextureCoord).rgb - 0.5));
+
+    // Normalize the light direction and determine how much light is hitting this point
+    vec3 lightDirection = normalize(vTangentLightDir);
+    float lambertTerm = max(dot(normal,lightDirection),0.20);
+
+    // Calculate Specular level
+    vec3 eyeDirection = normalize(vTangentEyeDir);
+    vec3 reflectDir = reflect(-lightDirection, normal);
+    float Is = pow(clamp(dot(reflectDir, eyeDirection), 0.0, 1.0), 8.0);
+
+    // Combine lighting and material colors
+    vec4 Ia = uLightAmbient * uMaterialAmbient;
+    vec4 Id = uLightDiffuse * uMaterialDiffuse * texture2D(uSampler, vTextureCoord) * lambertTerm;
+    
+    gl_FragColor = Ia + Id + Is;
+}
+</script>
+
+

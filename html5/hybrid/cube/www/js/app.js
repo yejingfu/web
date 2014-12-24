@@ -94,9 +94,21 @@ angular.module('starter', ['ionic', 'starter.controllers', 'starter.services'])
         controller: 'AccountCtrl'
       }
     }
-  });
+  })
+
+  .state('tab.showcase', {
+    url: '/showcase',
+    views: {
+      'tab-showcase': {
+        templateUrl: 'templates/showcase.html',
+        controller: 'ShowcaseCtrl'
+      }
+    }
+  })
+
+;
 
   // if none of the above states are matched, use this as the fallback
-  $urlRouterProvider.otherwise('/tab/dash');
+  $urlRouterProvider.otherwise('/tab/showcase');
 
 });
