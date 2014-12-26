@@ -1,0 +1,11 @@
+{
+  "name": "hello_nan",
+  "version": "0.0.1",
+  "description": "Creating Node.js addon based on nan",
+  "main": "main.js",
+  "private": true,
+  "gypfile": true,
+  "dependencies": {
+    "nan": "^1.4.1"
+  }
+}
