@@ -6,7 +6,7 @@ inline int randall(unsigned int *seed) {
 #ifdef _WIN32
   return rand();
 #else
-  return rand_(seed);
+  return rand_r(seed);
 #endif
 }
 

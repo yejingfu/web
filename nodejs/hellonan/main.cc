@@ -17,6 +17,7 @@ void initialize(Handle<Object> exports) {
 	       NanNew<FunctionTemplate>(calculateAsync)->GetFunction());
 }
 
-NODE_MODULE(piestimation, initialize)
+// The 'hellonan' is the module name which is defined in the 'binding.gyp'.
+NODE_MODULE(hellonan, initialize)
 
 

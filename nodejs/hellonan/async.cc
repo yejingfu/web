@@ -11,28 +11,28 @@ class PiWorker : public NanAsyncWorker {
 public:
   PiWorker(NanCallback *callback, int points)
     : NanAsyncWorker(callback)
-    , this->points(points)
-    , estimate(0) {
+    , points(points)
+    , result(0) {
   }
 
   ~PiWorker() {}
 
   void Execute() {
-    this->estimate = estimate(points);
+    result = estimate(points);
   }
 
   void HandleOKCallback() {
     NanScope();
     Local<Value> argv[] = {
       NanNull(),
-      NanNew<Number>(this->estimate)
+      NanNew<Number>(this->result)
     };
     callback->Call(2, argv);
   }
 
 private:
   int points;
-  double estimate;
+  double result;
 
 };
 
