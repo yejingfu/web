@@ -16,7 +16,7 @@ $ sudo apt-get intall build-essentials    ## maybe required on ubuntu
 
 Note if failed to install node-gyp because of proxy setting, please manually set proxy like:
 ``` bash
-$ sudo npm config set http-proxy http://proxy-shz.intel.com:911
+$ sudo npm config set proxy http://proxy-shz.intel.com:911
 $ sudo npm config set https-proxy https://proxy-shz.intel.com:911
 ```
 
