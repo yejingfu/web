@@ -5,7 +5,18 @@ function respond(req, res, next) {
   next();
 }
 
-var server = restify.createServer();
+var options = {
+  // certificate:   // for https
+  // key: ,         // for https
+  // formatters: ,  // custom format for res.send()
+  //log: ,          // bunyan 
+  name: 'Hello Restify',         // default 'restify'
+  //spdy: ,         // for node-spdy
+  //version: ,      // default version for all routes
+  //handleUpgrades: // default false
+};
+
+var server = restify.createServer(options);
 server.get('/hello/:name', respond);
 server.head('/hello/:name', respond);
 
