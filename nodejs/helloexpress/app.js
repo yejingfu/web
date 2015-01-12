@@ -56,8 +56,24 @@ app.use(function(err, req, res, next) {
     });
 });
 
+// socket server setup
+var socketserver = require('http').Server(app);
+var io = require('socket.io')(socketserver);
+var fs = require('fs');
+io.on('connection', function(socket){
+  console.log('get a connection from client');
+  socket.on('chat message', function(msg) {
+    io.emit('chat message', msg);
+  });
+});
+
+socketserver.listen(3001, function(){
+  console.log('socket server is listening on port 3001');
+});
+
+
+
 console.log('env: ' + app.get('env'));      // set in command line like: $ NODE_ENV=production ./bin/www
 console.log('DEBUG: ' + process.env.DEBUG); // set in command line like: $ DEBUG=XXX ./bin/www
-
 
 module.exports = app;
