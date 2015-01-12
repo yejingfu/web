@@ -25,17 +25,18 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', routes);
 app.use('/users', users);
 
+app.get('/test/', function(req, res) {  // BAD path: '/test/:name'
+  res.end('Test---');
+});
+
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
-    var err = new Error('Not Found');
+    var err = new Error('Not Found: AA');
     err.status = 404;
     next(err);
 });
 
-// error handlers
-
-// development error handler
-// will print stacktrace
+// development error handler will print stacktrace
 if (app.get('env') === 'development') {
     app.use(function(err, req, res, next) {
         res.status(err.status || 500);
@@ -46,8 +47,7 @@ if (app.get('env') === 'development') {
     });
 }
 
-// production error handler
-// no stacktraces leaked to user
+// production error handler no stacktraces leaked to user
 app.use(function(err, req, res, next) {
     res.status(err.status || 500);
     res.render('error', {
@@ -55,6 +55,9 @@ app.use(function(err, req, res, next) {
         error: {}
     });
 });
+
+console.log('env: ' + app.get('env'));      // set in command line like: $ NODE_ENV=production ./bin/www
+console.log('DEBUG: ' + process.env.DEBUG); // set in command line like: $ DEBUG=XXX ./bin/www
 
 
 module.exports = app;
