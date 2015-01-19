@@ -1,6 +1,6 @@
 var restify = require('restify');
 
-function respond(req, res, next) {
+function handler(req, res, next) {
   res.send('hello ' + req.params.name);
   next();
 }
@@ -17,8 +17,8 @@ var options = {
 };
 
 var server = restify.createServer(options);
-server.get('/hello/:name', respond);
-server.head('/hello/:name', respond);
+server.get('/hello/:name', handler);
+server.head('/hello/:name', handler);
 
 server.listen(3011, function() {
   console.log('%s listening at %s', server.name, server.url);
