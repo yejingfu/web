@@ -62,8 +62,14 @@ var io = require('socket.io')(socketserver);
 var fs = require('fs');
 io.on('connection', function(socket){
   console.log('get a connection from client');
+
   socket.on('chat message', function(msg) {
-    io.emit('chat message', msg);
+    io.emit('chat message', msg);                   // send to everyone
+    //socket.broadcast.emit('chat message', msg);   // send to others
+  });
+
+  socket.on('disconnect', function() {
+    console.log('a client is disconnected');
   });
 });
 
