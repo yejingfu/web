@@ -3,43 +3,44 @@
 var Worker = require('webworker-threads').Worker;
 
 var company = 'Intel';
-var buffer = new ArrayBuffer(12, 0);
+
+// |03|00|00|00|20|......|
+var len = 20;
+var buffer = new ArrayBuffer(len, 0);   // 0 -- initial value
 var view = new DataView(buffer);
+var int8view = new Int8Array(buffer);
 view.setInt8(0, 0x03);
-//view[0] = 123;
-view.setFloat32(1, 11.2);
+//view[0] = 0x03;
+view.setInt32(1, 0x20);
 
 var w = new Worker(function() {
   // in child thread
-  console.log('Worker is trying to access global variable:');
+  console.log('[Worker]: begin...');
   //console.log('compnay in worker:' + company);   // failed
-  company = 'Intel Ltd';   // failed as well
-  postMessage('Greeting from worker before postMessage');
+  // company = 'Intel Ltd';   // failed as well
   this.onmessage = function(e) {
     if (typeof e.data === 'string') {
-      console.log('hi');
-      postMessage('Hi ' + e.data);
+      console.log('[Worker]: received: ' + e.data);
+      postMessage('Echo: ' + e.data);
     } else {
-      console.log('Hi 2:');// + e.data.getFloat32(1));
+      console.log('[Worker]:'); // + e.data.getInt8(0));  // failed to access typed buffer
     }
-    self.close();
+    self.close();  // exit thread, does not affect actually ?
   };
 });
 
 // in main thread
 var view1 = new DataView(buffer);
 console.log('view1[0]: '+ view1.getInt8(0));
-console.log('view1[1]: ' + view1.getFloat32(1));
+console.log('view1[1]: ' + view1.getInt32(0));
+console.log('int8view[4]:' + int8view[4]);
 
 w.onmessage = function(e) {
-  console.log('Msg received from worker:'+e.data);
-  console.log('company in main 2: ' + company);
+  console.log('[Main]:'+e.data);
 };
-//w.postMessage('Jingfu');
-w.postMessage(view1);
+w.postMessage('Jingfu');
+w.postMessage('Jingfu 2');
+//w.postMessage(view1);  // DO NOT do that
 
-console.log('company in main: ' + company);
 
-console.log('===========ArrayBuffer Example 2 ==========');
-var buff2 
 
