@@ -32,13 +32,13 @@ $ sudo npm config set https-proxy https://proxy-shz.intel.com:911
 
 - Create binding.gyp
 
-``` python
-"include_dirs" : [
-    "<!(node -e \"require('nan')\")"
-]
+``` yaml
+  "include_dirs" : [
+      "<!(node -e \"require('nan')\")"
+  ]
 ```
 
-This works like a `-I<path-to-NAN>` when compiling your addon.
+The `<!(node -e \"require('nan')\")` can get the path of module `nan'. This works like a `-I<path-to-NAN>` when compiling your addon.
 
 - Code cpp entry: main.cc
 
@@ -56,15 +56,20 @@ $ npm install --save nan
 
 ```bash
 $ node-gyp configure
-$ node-gyp build
+$ node-gyp build  ## or
+$ node-gyp build --debug
 ## or a single line
 $ node-gyp configure build
 ```
+
+  The `hello.node ` would be created at `build/Release/`.
 
 - Run demo
 ``` bash
 $ node main-demo.js
 ```
+
+For more example, see [node-addon-examples](https://github.com/yejingfu/node-addon-examples)
 
 
 
