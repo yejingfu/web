@@ -9,7 +9,7 @@ var len = 20;
 var buffer = new ArrayBuffer(len, 0);   // 0 -- initial value
 var view = new DataView(buffer);
 var int8view = new Int8Array(buffer);
-view.setInt8(0, 0x03);
+view.setInt8(0, 0x03);  // or
 //view[0] = 0x03;
 view.setInt32(1, 0x20);
 
