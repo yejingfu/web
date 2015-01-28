@@ -11,6 +11,9 @@
 
 var HEAD_SIZE = 12;
 
+///
+/// Utilities
+///
 function buf2str(buf, offset) {
   offset = offset || 0;
   var view = new DataView(buf, offset);
@@ -47,6 +50,9 @@ function appendBuffer(buf1, buf2, offset) {
   return true;
 }
 
+///
+/// Header
+///
 function buildPacketHeader(len, sid, cid) {
   if (len % 4 !== 0) {
     len += (4 - len % 4);
@@ -83,6 +89,9 @@ function testHeader() {
   }
 }
 
+///
+/// Echo
+///
 function buildEchoPacket() {
   var magic = 458928;
   var msg = 'Hello World';
@@ -113,6 +122,9 @@ function testEchoPacket() {
   console.log('echo packet: ' + JSON.stringify(ret));
 }
 
+///
+/// Testing
+///
 testHeader();
 testEchoPacket();
 
