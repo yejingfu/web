@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Socket client Demo</title>
+</head>
+
+<body>
+<h1>Web Socket Demo</h1>
+
+<script>
+  var url = 'ws://localhost:1333/';
+  var conn = new WebSocket(url);
+  conn.onopen = function() {
+    console.log('Connected to server');
+    conn.send('Greeting from client');
+  };
+  conn.onerror = function(err) {
+    debugger;
+    console.log('WebSocket error:'+err.data);
+  };
+  conn.onmessage = function(e) {
+    console.log('msg from server:' + e.data);
+  };
+
+</script>
+</body>
+  
+</html>
+
